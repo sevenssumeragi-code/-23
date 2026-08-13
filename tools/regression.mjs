@@ -332,6 +332,154 @@ test('四章 neo_sync はどの選択肢でもネオが同一文言を同時に�
   }
 });
 
+/* ------------------------------------------------------------
+   追補 §1-2 疑念の閾値：超えると決定的な情報が出てこない
+   ------------------------------------------------------------ */
+test('疑念40でジンパチはレコーダーを渡さない（EVD_KAI_STEP2 が失われる）', () => {
+  const gate = api.SCENARIO.ch2.find(n => n.if && n.then === 'jin_tape_refuse');
+  assert(gate, 'jin_tape の疑念ゲートが無い');
+  const S = fresh();
+  S.chars.JIN.doubt = 39; eq(api.cond(gate.if), false, '39 で塞がってしまう');
+  S.chars.JIN.doubt = 40; eq(api.cond(gate.if), true, '40 で塞がらない');
+  // 迂回して録音に辿り着けないこと＝失われる情報の確認
+  const ch2 = api.SCENARIO.ch2;
+  const refuse = ch2.findIndex(n => n.n === 'jin_tape_refuse');
+  const seg = ch2.slice(refuse, ch2.findIndex((n,i) => i > refuse && n.n === 'jin_end'));
+  assert(!seg.some(n => n.rec), '拒否ルートで録音が手に入ってしまう');
+});
+
+test('疑念35でヒュウは右目を語らない（HYU_EYE_01 が立たない）', () => {
+  const gate = api.SCENARIO.ch3.find(n => n.if && n.then === 'hyu_eye_hide');
+  assert(gate, 'hyu_eye の疑念ゲートが無い');
+  const S = fresh();
+  S.chars.HYU.doubt = 34; eq(api.cond(gate.if), false, '34 で塞がってしまう');
+  S.chars.HYU.doubt = 35; eq(api.cond(gate.if), true, '35 で塞がらない');
+  const ch3 = api.SCENARIO.ch3;
+  const i = ch3.findIndex(n => n.n === 'hyu_eye_hide');
+  const seg = ch3.slice(i, i + 20);
+  assert(!seg.some(n => n.set && n.set.HYU_EYE_01), '拒否ルートで HYU_EYE_01 が立つ');
+});
+
+test('疑念40でゲルは灰堂を伏せる。回復イベントは一度きり', () => {
+  const gate = api.SCENARIO.ch5.find(n => n.if && n.then === 'ger_c3_hide');
+  assert(gate, 'ger_c3 の疑念ゲートが無い');
+  const S = fresh();
+  S.chars.GER.doubt = 40;
+  eq(api.cond(gate.if), true, '40 で塞がらない');
+  api.SET('GER_HIDE_SEEN');
+  eq(api.cond(gate.if), false, '二度目も分岐して無限ループになる');
+  // 回復選択肢は疑念を閾値未満まで落とせる量を持つ
+  const hide = api.SCENARIO.ch5;
+  const chNode = hide.slice(hide.findIndex(n => n.n === 'ger_c3_hide')).find(n => n.ch);
+  const rec = chNode.ch.find(o => o.eff && o.eff['GER.doubt'] <= -25);
+  assert(rec, '回復選択肢の疑念減少が -25 未満');
+});
+
+test('疑念30でムニは終章の指示を受け取れず、回復選択肢だけが現れる', () => {
+  const fin = api.SCENARIO.fin;
+  const teach = fin.filter(n => n.ch).flatMap(n => n.ch)
+    .filter(o => o.req && JSON.stringify(o.req).includes('FIN_LOW'));
+  assert(teach.length >= 2, '終章の教える選択肢が見つからない');
+  for (const o of teach) assert(JSON.stringify(o.req).includes('ndbt'), '疑念ロックが掛かっていない');
+
+  const S = fresh();
+  api.SET('MUN_TEACH_01');
+  const node = fin.find(n => n.ch && n.ch.some(o => o.go === 'fin_t1'));
+  S.chars.MUN.doubt = 30;
+  const low = node.ch.find(o => o.go === 'fin_t1');
+  eq(api.cond(low.req), false, '疑念30でも教えられてしまう');
+  S.chars.MUN.doubt = 29;
+  eq(api.cond(low.req), true, '疑念29で教えられない');
+
+  const rec = node.ch.find(o => o.go === 'fin_recover');
+  assert(rec, 'ムニの回復選択肢が無い');
+  S.chars.MUN.doubt = 30;
+  eq(api.cond(rec.hide), true, '疑念30で回復選択肢が出ない');
+  S.chars.MUN.doubt = 10;
+  eq(api.cond(rec.hide), false, '疑念が低いのに回復選択肢が出る');
+  eq(rec.eff['MUN.doubt'], -45, '回復量が設計値と違う');
+});
+
+/* ------------------------------------------------------------
+   追補 §5 留守番電話は二晩で上書きされる
+   ------------------------------------------------------------ */
+test('留守電は二晩で上書きされ、VM_MISS と発信者への代償が入る', () => {
+  const S = fresh();
+  api.applyData({ vm: ['テスト', '本文', 'jin_first', 'JIN', { c: 'JIN', trust: -12, doubt: 20 }] });
+  const before = S.chars.JIN.trust;
+  S.day = 1; eq(api.expireVM(), 0, '当夜に消えた');
+  S.day = 2; eq(api.expireVM(), 0, '翌夜に消えた');
+  S.day = 3; eq(api.expireVM(), 1, '三晩目に消えない');
+  eq(api.CNT('VM_MISS'), 1, 'VM_MISS が増えない');
+  eq(api.F('VM_LOST_jin_first'), true, 'VM_LOST_ が立たない');
+  eq(S.chars.JIN.trust, before - 12, '上書きの代償が入っていない');
+  eq(api.expireVM(), 0, '同じメッセージで二重に減点される');
+});
+
+test('再生済みの留守電は上書きされない', () => {
+  const S = fresh();
+  api.applyData({ vm: ['テスト', '本文', 'k', 'JIN', { c: 'JIN', trust: -99 }] });
+  S.vm[0].played = 1;
+  S.day = 5;
+  eq(api.expireVM(), 0, '再生済みが消えた');
+  eq(api.CNT('VM_MISS'), 0, '再生済みで VM_MISS が増えた');
+});
+
+/* ------------------------------------------------------------
+   追補 §6 通話時間・疲労・保留
+   ------------------------------------------------------------ */
+test('勤務時間は360分。超過すると疲労が1段ずつ増え、制限時間が短くなる', () => {
+  const S = fresh();
+  eq(api.timeLeft(), 360, '初期の残り時間が360分でない');
+  eq(api.realSec(20), 20, '疲労0で制限時間が変わる');
+  S.clock = api.SHIFT_END;
+  eq(api.checkShift(), true, '超過を検出しない');
+  eq(api.checkShift(), false, '同じ夜に二重加算される');
+  eq(api.fatigue(), 1, '疲労が増えていない');
+  eq(api.realSec(20), 18, '制限時間が12%短縮されない');
+  S.flags.OVERTIME = 9;
+  eq(api.fatigue(), 4, '疲労が4段で頭打ちにならない');
+});
+
+test('保留は待たせた分数に比例して相手を削る', () => {
+  const S = fresh();
+  S.clock = 22 * 60;
+  api.holdLine('HYU');
+  S.clock += 10;
+  const min = api.resumeLine();
+  eq(min, 10, '保留分数が違う');
+  eq(S.chars.HYU.fear, 12, '恐怖 1.2/分 になっていない');
+  eq(S.chars.HYU.stress, 9, 'ストレス 0.9/分 になっていない');
+  eq(S.chars.HYU.trust, 20 - 3, '信頼 -0.3/分 になっていない');
+  eq(S.held, null, '保留が解除されていない');
+});
+
+/* ------------------------------------------------------------
+   追補 §2 メモの札
+   ------------------------------------------------------------ */
+test('メモの札は MB_/MD_ になり、同じ札をもう一度押すと保留に戻る', () => {
+  const S = fresh();
+  api.applyData({ memo: ['雨', '降っていない雨', 'rain'] });
+  const m = S.memo[S.memo.length - 1];
+  api.markMemo(m, 'b');
+  eq(api.cond({ mb: 'rain' }), true, '〈信じる〉が立たない');
+  api.markMemo(m, 'd');
+  eq(api.cond({ mb: 'rain' }), false, '札を替えても前の札が残る');
+  eq(api.cond({ md: 'rain' }), true, '〈疑う〉が立たない');
+  api.markMemo(m, 'd');
+  eq(api.cond({ md: 'rain' }), false, '同じ札の再押下で保留に戻らない');
+  eq(m.mark, null, 'mark が保留に戻らない');
+});
+
+test('キーの無いメモには札を付けられない', () => {
+  const S = fresh();
+  api.applyData({ memo: ['無キー', '本文'] });
+  const m = S.memo[S.memo.length - 1];
+  api.markMemo(m, 'b');
+  eq(m.mark, undefined === m.mark ? m.mark : null, 'キー無しメモに札が付いた');
+  eq(Object.keys(S.flags).some(k => k.startsWith('MB_')), false, 'キー無しで MB_ が立った');
+});
+
 /* ------------------------------------------------------------ */
 console.log('ミッドナイトライン ― 回帰テスト\n');
 for (const [mark, name] of results) {

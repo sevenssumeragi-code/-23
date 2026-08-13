@@ -533,11 +533,74 @@ function replayRoutes() {
 }
 
 /* ============================================================
+   5.5 プレイスタイル別の帰結（追補 §4 / §5-5 の期待値）
+
+   疑念や留守電は、直接パラメータを差し込めば動く。だがそれでは
+   「実際に疑ってかかり続けたら、そうなるのか」の答えにならない。
+   ここでは方針だけを決めた自動プレイを通し、帰結を確かめる。
+   ============================================================ */
+
+/** 疑ってかかり続ける。疑念を上げる手を最優先し、下げる手を避ける */
+const doubtPolicy = () => ({
+  listen: () => true,
+  pick(list) {
+    let best = list[0], bestScore = -Infinity;
+    for (const o of list) {
+      let sc = 0;
+      for (const [k, v] of Object.entries(o.eff || {})) {
+        if (k.endsWith('.doubt')) sc += v;          // 疑念を上げる手ほど高得点
+        if (k.endsWith('.trust')) sc -= v * 0.2;
+      }
+      if (sc > bestScore) { bestScore = sc; best = o; }
+    }
+    return best;
+  }
+});
+
+/** 留守電を一切聞かない（listen=false）＝ §5 の上書きを必ず起こす */
+const ignoreVMPolicy = () => ({
+  listen: () => false,
+  pick: (list, nd, rng) => list[Math.floor(rng() * list.length)]
+});
+
+function playstyles(seed) {
+  console.log('\n■ プレイスタイル別の帰結（追補 §4・§5-5）');
+
+  // 1. 疑ってかかり続ける → 封鎖分岐を通り、GOOD 以上には届かない
+  let hit = null, ends = new Set();
+  for (let i = 0; i < 60 && !hit; i++) {
+    const G = freshG();
+    const r = playOnce(doubtPolicy(), seed + i * 131, G);
+    ends.add(r.end);
+    const blocked = ['JIN', 'HYU', 'GER'].filter(c => r.chars[c] && r.chars[c].doubt >= 35);
+    if (blocked.length) hit = { r, blocked };
+  }
+  if (hit) ok(`疑ってかかり続けると疑念が閾値に達する（${hit.blocked.join('・')}）`);
+  else fail('疑ってかかり続けても、誰の疑念も閾値に届かない＝封鎖分岐が死んでいる');
+  if ([...ends].every(e => e === 'BAD' || e === 'NORMAL')) {
+    ok(`疑ってかかり続けた帰結は ${[...ends].join('・')}（GOOD 以上に届かない）`);
+  } else {
+    fail(`疑ってかかり続けても ${[...ends].join('・')} に到達してしまう`);
+  }
+
+  // 2. 留守電を放置 → VM_MISS が積み上がる
+  let miss = 0;
+  for (let i = 0; i < 20; i++) {
+    const G = freshG();
+    const r = playOnce(ignoreVMPolicy(), seed + i * 977, G);
+    miss = Math.max(miss, r.flags.VM_MISS | 0);
+  }
+  if (miss > 0) ok(`留守電を放置すると上書きされる（最大 VM_MISS ${miss} 件）`);
+  else fail('留守電を放置しても一件も上書きされない＝保存期限が効いていない');
+}
+
+/* ============================================================
    6. 実行
    ============================================================ */
 console.log('ミッドナイトライン ― シナリオ検証');
 staticChecks();
 rollouts(ROLLOUTS, SEED);
+playstyles(SEED);
 const found = seekRoutes(SEED);
 
 if (RECORD) {

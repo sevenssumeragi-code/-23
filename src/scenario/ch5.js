@@ -129,7 +129,7 @@ SCENARIO.ch5 = [
  {know:['GER','放火犯とされた職員・剛三の娘','父の無実を証明するため十年調べている']},
  {rel:['ゲル','—— 娘','剛三（当直職員）']},
  {ch:[
-  {t:'……よく、話してくれました',tag:'受容',eff:{'GER.trust':15,'GER.stress':-10},go:'ger_c2'},
+  {t:'……よく、話してくれました',tag:'受容',eff:{'GER.doubt':-15,'GER.trust':15,'GER.stress':-10},go:'ger_c2'},
   {t:'最初から、そう言ってくれればよかったのに',tag:'指摘',eff:{'GER.trust':-5,'GER.stress':8},go:'ger_c2'},
   {t:'そうだと思っていました',tag:'看破',req:{f:'GER_LIE_01'},eff:{'GER.trust':10,'GER.doubt':-10},set:{GER_ID_01:1},go:'ger_c2'}
  ]},
@@ -158,7 +158,7 @@ SCENARIO.ch5 = [
  {tl:['10年前 8/14','点呼簿の七人目の記載が、提出時に削除されている。']},
  {ch:[
   {t:'その一割を、証明できるものがあります',tag:'開示',req:{f:'EVD_TAPE_01'},eff:{'GER.trust':20},set:{GER_TAPE_KNOW:1},go:'ger_tape'},
-  {t:'お父さんのこと、聞かせてください',tag:'傾聴',eff:{'GER.trust':12,'GER.stress':-8},go:'ger_c3'}
+  {t:'お父さんのこと、聞かせてください',tag:'傾聴',eff:{'GER.doubt':-12,'GER.trust':12,'GER.stress':-8},go:'ger_c3'}
  ]},
 
  {n:'ger_tape'},
@@ -175,11 +175,14 @@ SCENARIO.ch5 = [
  {nar:'受話器が布に押しつけられる。'},
  {nar:'十七秒。押し殺した嗚咽が、布越しに、それでも届いてきた。'},
  {ch:[
-  {t:'（何も言わず、待った）',tag:'沈黙',silent:1,eff:{'GER.trust':18,'GER.stress':-20},go:'ger_c3'},
-  {t:'泣いていいんですよ',tag:'受容',eff:{'GER.trust':12,'GER.stress':-15},go:'ger_c3'}
+  {t:'（何も言わず、待った）',tag:'沈黙',silent:1,eff:{'GER.doubt':-12,'GER.trust':18,'GER.stress':-20},go:'ger_c3'},
+  {t:'泣いていいんですよ',tag:'受容',eff:{'GER.doubt':-15,'GER.trust':12,'GER.stress':-15},go:'ger_c3'}
  ]},
 
  {n:'ger_c3'},
+ /* 追補 §1-2: 疑念40超で、ゲルは灰堂の名前と所在を出さずに切る。
+    KAI_EXPOSE_01 と GER_KNIFE_01 が失われる。§1-5 の回復イベントを1回だけ置く。 */
+ {if:{and:[{dbt:['GER',40]},{nf:'GER_HIDE_SEEN'}]}, then:'ger_c3_hide'},
  {c:'GER',say:'……ありがとう。十年ぶりに、お父さんと呼べた気がする。',slow:1},
  {nar:'鼻をすする音。それを隠すための、わざとらしい咳払い。'},
  {c:'GER',say:'そして、報告がある。奴を見つけた。'},
@@ -223,6 +226,39 @@ SCENARIO.ch5 = [
  {c:'GER',say:'私はこれを、警察に持っていける形にしなければならない。'},
  {go:'ger_c4'},
 
+ {n:'ger_c3_hide'},
+ {set:{GER_HIDE_SEEN:1}},   /* 回復イベントは一度きり（追補 §1-5） */
+ {nar:'紙をめくる音が、途中で止まった。'},
+ {c:'GER',say:'……いや。今日はここまでにしよう。'},
+ {c:'GER',say:'お前は私を、まだ半分しか信用していない。'},
+ {nar:'否定できなかった。'},
+ {c:'GER',say:'……私も同じだ。だから、おあいこだな。'},
+ {nar:'おあいこ、と言う声が、いちばん冷たかった。'},
+ {sec:12},
+ {ch:[
+  {t:'待ってください。疑うような聞き方をしたのは、私の落ち度です',tag:'謝罪',
+   eff:{'GER.doubt':-30,'GER.trust':10},go:'ger_recover'},
+  {t:'あなたのお父さんの名誉は、あなた一人では晴らせない',tag:'説得',req:{f:'EVD_TAPE_01'},
+   eff:{'GER.doubt':-25,'GER.trust':12},go:'ger_recover'},
+  {t:'……わかりました',tag:'受容',go:'ger_c3_cut'},
+  {t:'（何も言えなかった）',tag:'沈黙',silent:1,timeout:1,go:'ger_c3_cut'}
+ ]},
+
+ {n:'ger_recover'},
+ {nar:'長い沈黙。舌打ちが一つ。それから、諦めたような息。'},
+ {c:'GER',say:'……ふん。そう言われると、こちらも引けなくなるな。'},
+ {c:'GER',say:'いいだろう。報告がある。'},
+ {par:{c:'GER',stress:-10}},
+ {go:'ger_c3'},
+
+ {n:'ger_c3_cut'},
+ {c:'GER',say:'掴んだものは、掴んだ者が使う。それだけだ。'},
+ {hang:'相手側が切電',hangKind:'cut'},
+ {nar:'灰堂という名前を、あなたはこの夜、聞けなかった。'},
+ {nar:'——名前を知らないものは、証拠として並べられない。'},
+ {memo:['ゲルが伏せた名前','灰堂の所在を掴んでいたが、教えられなかった。疑念が高いままだった。']},
+ {go:'d12'},
+
  {n:'ger_c4'},
  {c:'GER',say:'……で、だ。私はこれから、奴のところへ行こうと思っている。'},
  {nar:'声の底に、刃物のような硬さがある。'},
@@ -235,8 +271,8 @@ SCENARIO.ch5 = [
    req:{tr:['GER',50]},eff:{'GER.trust':15,'GER.stress':-10},set:{GER_KNIFE_01:1},go:'ger_stop'},
   {t:'あなたが手を汚したら、剛三さんはもう一度犯罪者になる',tag:'説得',
    req:{f:'EVD_TAPE_01'},eff:{'GER.trust':12},set:{GER_KNIFE_01:1},go:'ger_stop'},
-  {t:'……気持ちは分かります',tag:'受容',eff:{'GER.trust':5,'GER.fear':10},go:'ger_go'},
-  {t:'（止められなかった）',tag:'沈黙',silent:1,timeout:1,eff:{'GER.stress':15},go:'ger_go'}
+  {t:'……気持ちは分かります',tag:'受容',eff:{'GER.doubt':-15,'GER.trust':5,'GER.fear':10},go:'ger_go'},
+  {t:'（止められなかった）',tag:'沈黙',silent:1,timeout:1,eff:{'GER.doubt':-12,'GER.stress':15},go:'ger_go'}
  ]},
 
  {n:'ger_stop'},
@@ -329,7 +365,7 @@ SCENARIO.ch5 = [
    eff:{'JIN.trust':12,'JIN.stress':-15},go:'jin_stop2'},
   {t:'今夜は、二回目まで鳴らしてみませんか',tag:'伴走',
    eff:{'JIN.trust':10,'JIN.fear':-10},go:'jin_stop2'},
-  {t:'（黙って、最後まで聞いた）',tag:'沈黙',silent:1,eff:{'JIN.trust':10},go:'jin_stop2',
+  {t:'（黙って、最後まで聞いた）',tag:'沈黙',silent:1,eff:{'JIN.doubt':-12,'JIN.trust':10},go:'jin_stop2',
    line:'（あなたは黙って、最後まで聞いた）'}
  ]},
 
@@ -373,7 +409,7 @@ SCENARIO.ch5 = [
  {ch:[
   {t:'レニィ。周りに何が見える? ゆっくりでいい',tag:'確認',eff:{'LEN.trust':6},go:'len12b'},
   {t:'今すぐそこを出て。誰かが来る前に',tag:'指示',eff:{'LEN.fear':20},go:'len12b'},
-  {t:'大丈夫。私はここにいる。何があっても切らない',tag:'伴走',eff:{'LEN.trust':15,'LEN.fear':-10},set:{LEN_STAY:1},go:'len12b'}
+  {t:'大丈夫。私はここにいる。何があっても切らない',tag:'伴走',eff:{'LEN.doubt':-15,'LEN.trust':15,'LEN.fear':-10},set:{LEN_STAY:1},go:'len12b'}
  ]},
 
  {n:'len12b'},
@@ -392,7 +428,7 @@ SCENARIO.ch5 = [
   {t:'レニィ。その線の名前を、読んで',tag:'核心',req:{tr:['LEN',60]},
    eff:{'LEN.trust':10,'LEN.fear':15},set:{LEN_REMEMBER:1},go:'len_remember'},
   {t:'思い出さなくていい。いまはそこを離れて',tag:'配慮',eff:{'LEN.fear':-10},go:'len_leave'},
-  {t:'（言葉が出ない）',tag:'沈黙',silent:1,timeout:1,eff:{'LEN.fear':15},go:'len_leave'}
+  {t:'（言葉が出ない）',tag:'沈黙',silent:1,timeout:1,eff:{'LEN.doubt':-12,'LEN.fear':15},go:'len_leave'}
  ]},
 
  {n:'len_remember'},
@@ -410,8 +446,8 @@ SCENARIO.ch5 = [
  {tlfix:['10年前 8/14','灯守園の火災で死亡した園児は、レニィの弟・ムニ（5歳）。兄は記憶を封じた。']},
  {memo:['レニィの記憶','弟の名を思い出した。忘れることで、彼は生き延びていた。']},
  {ch:[
-  {t:'忘れていたのは、あなたが弱かったからじゃない',tag:'受容',eff:{'LEN.trust':20,'LEN.stress':-20},go:'len_kai'},
-  {t:'よく、思い出してくれました',tag:'受容',eff:{'LEN.trust':15},go:'len_kai'}
+  {t:'忘れていたのは、あなたが弱かったからじゃない',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':20,'LEN.stress':-20},go:'len_kai'},
+  {t:'よく、思い出してくれました',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':15},go:'len_kai'}
  ]},
 
  {n:'len_leave'},

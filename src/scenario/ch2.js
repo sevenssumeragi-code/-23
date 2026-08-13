@@ -34,7 +34,7 @@ SCENARIO.ch2 = [
  {call:{who:'ジンパチ',c:'JIN',num:'090-XXXX-4408'}},
  {ch:[
   {t:'警察には届けましたか',tag:'確認',eff:{'JIN.trust':5},go:'jin2'},
-  {t:'……つらいですね。まず、あなたの話を聞かせてください',tag:'傾聴',eff:{'JIN.trust':10,'JIN.stress':-5},go:'jin_open'},
+  {t:'……つらいですね。まず、あなたの話を聞かせてください',tag:'傾聴',eff:{'JIN.doubt':-12,'JIN.trust':10,'JIN.stress':-5},go:'jin_open'},
   {t:'ここは事件を扱う窓口ではありません',tag:'説明',eff:{'JIN.trust':-12,'JIN.stress':12},go:'jin_angry'}
  ]},
 
@@ -71,9 +71,9 @@ SCENARIO.ch2 = [
  {nar:'誰かにではなく、自分に言い聞かせるときの力の入り方だった。'},
  {ch:[
   {t:'消える前、変わった様子はありましたか',tag:'確認',eff:{'JIN.trust':6},go:'jin3'},
-  {t:'カナタさんは、どんな人ですか',tag:'傾聴',eff:{'JIN.trust':8,'JIN.stress':-4},go:'jin_canata'},
-  {t:'あなたは、カナタさんに何かしてあげられなかったと思っている?',tag:'傾聴',eff:{'JIN.trust':4,'JIN.stress':10},go:'jin_guilt'},
-  {t:'心配なんですね',tag:'受容',eff:{'JIN.trust':2},go:'jin_lie'}
+  {t:'カナタさんは、どんな人ですか',tag:'傾聴',eff:{'JIN.doubt':-12,'JIN.trust':8,'JIN.stress':-4},go:'jin_canata'},
+  {t:'あなたは、カナタさんに何かしてあげられなかったと思っている?',tag:'傾聴',eff:{'JIN.doubt':-12,'JIN.trust':4,'JIN.stress':10},go:'jin_guilt'},
+  {t:'心配なんですね',tag:'受容',eff:{'JIN.doubt':-15,'JIN.trust':2},go:'jin_lie'}
  ]},
 
  {n:'jin_canata'},
@@ -129,10 +129,10 @@ SCENARIO.ch2 = [
  {nar:'声が、わずかに高い。息が浅い。強がるとき、人の声は本当のことより少し速くなる。'},
  {nar:'背後で、指が何かを叩いている。机か、膝か。一定のリズムで、止まらない。'},
  {ch:[
-  {t:'……そうですか。ムカついているんですね',tag:'受容',eff:{'JIN.trust':3},go:'jin_lie_pass'},
+  {t:'……そうですか。ムカついているんですね',tag:'受容',eff:{'JIN.doubt':-15,'JIN.trust':3},go:'jin_lie_pass'},
   {t:'ジンパチさん。いま、少し早口になりました',tag:'指摘',eff:{'JIN.trust':6,'JIN.doubt':5,'JIN.stress':8},set:{JIN_LIE_01:1},go:'jin_lie_see'},
   {t:'怒っている人の声は、もっと低くなります',tag:'指摘',eff:{'JIN.trust':8,'JIN.stress':6},set:{JIN_LIE_01:1},go:'jin_lie_see'},
-  {t:'（何も言わずに、指の音を聞いている）',tag:'沈黙',silent:1,eff:{'JIN.trust':5,'JIN.stress':4},go:'jin_lie_wait',
+  {t:'（何も言わずに、指の音を聞いている）',tag:'沈黙',silent:1,eff:{'JIN.doubt':-12,'JIN.trust':5,'JIN.stress':4},go:'jin_lie_wait',
    line:'（あなたは何も言わなかった。指を叩く音だけが続いていた）'}
  ]},
 
@@ -168,8 +168,8 @@ SCENARIO.ch2 = [
  {know:['JIN','失踪前夜、カナタの着信に出なかった','その罪悪感を怒りに変えている']},
  {memo:['ジンパチの後悔','失踪前夜23:40のカナタからの着信に出なかった。「明日でいいや」と思った。']},
  {ch:[
-  {t:'……その電話のこと、誰かに話したのは初めてですか',tag:'傾聴',eff:{'JIN.trust':14,'JIN.stress':-12},go:'jin_first'},
-  {t:'あなたのせいではありません',tag:'受容',eff:{'JIN.trust':4,'JIN.stress':-3},go:'jin4'},
+  {t:'……その電話のこと、誰かに話したのは初めてですか',tag:'傾聴',eff:{'JIN.doubt':-12,'JIN.trust':14,'JIN.stress':-12},go:'jin_first'},
+  {t:'あなたのせいではありません',tag:'受容',eff:{'JIN.doubt':-15,'JIN.trust':4,'JIN.stress':-3},go:'jin4'},
   {t:'出ていれば、何か変わったかもしれませんね',tag:'指摘',eff:{'JIN.trust':-15,'JIN.stress':20,'JIN.fear':10},go:'jin_blame'}
  ]},
 
@@ -196,8 +196,8 @@ SCENARIO.ch2 = [
  /* 【反転】回収=TRUE END。カナタ生還後、この番号は本当に繋がる。 */
  {c:'JIN',say:'出られたら、何て言えばいいか分かんねえからな。'},
  {ch:[
-  {t:'「わりい、電話出れなくて」。それで十分です',tag:'受容',eff:{'JIN.trust':12,'JIN.stress':-10},set:{JIN_WORDS:1},go:'jin_vm'},
-  {t:'その一回の呼び出し音は、ちゃんと届いていますよ',tag:'受容',eff:{'JIN.trust':10},go:'jin_vm'}
+  {t:'「わりい、電話出れなくて」。それで十分です',tag:'受容',eff:{'JIN.doubt':-15,'JIN.trust':12,'JIN.stress':-10},set:{JIN_WORDS:1},go:'jin_vm'},
+  {t:'その一回の呼び出し音は、ちゃんと届いていますよ',tag:'受容',eff:{'JIN.doubt':-15,'JIN.trust':10},go:'jin_vm'}
  ]},
 
  {n:'jin_vm'},
@@ -253,7 +253,7 @@ SCENARIO.ch2 = [
  {nar:'鍵はどうしたのか、とは訊かなかった。訊かなくても分かる種類の関係だ。'},
  {ch:[
   {t:'それは警察に渡すべきものです',tag:'指摘',eff:{'JIN.trust':-6},go:'jin_tape2'},
-  {t:'聞かせてください。電話越しでも構いません',tag:'受容',eff:{'JIN.trust':8},set:{JIN_TAPE:1},go:'jin_tape'}
+  {t:'聞かせてください。電話越しでも構いません',tag:'受容',eff:{'JIN.doubt':-15,'JIN.trust':8},set:{JIN_TAPE:1},go:'jin_tape'}
  ]},
 
  {n:'jin_tape2'},
@@ -262,6 +262,9 @@ SCENARIO.ch2 = [
  {go:'jin_tape'},
 
  {n:'jin_tape'},
+ /* 追補 §1-2: 疑念40超で、ジンパチはレコーダーを渡さない。
+    ここで EVD_KAI_STEP2（波形照合の片翼）が失われる。回復イベントは置かない。 */
+ {if:{dbt:['JIN',40]}, then:'jin_tape_refuse'},
  {noise:2},
  {nar:'受話器越しに、レコーダーの再生音。ギターのチューニング。カナタの鼻歌。'},
  {nar:'音が二重に濁っている。受話器で拾った、スピーカーから出た、録音された音。'},
@@ -283,10 +286,24 @@ SCENARIO.ch2 = [
  {noise:1},
  {go:'jin_end'},
 
+ {n:'jin_tape_refuse'},
+ {nar:'再生ボタンを押す音がしない。'},
+ {nar:'——押しかけて、やめた音がした。'},
+ {c:'JIN',say:'……いや。やっぱ、いいわ。'},
+ {c:'JIN',say:'あんた、俺の話を疑ってんだろ。'},
+ {c:'JIN',say:'声で分かるんだよ、そういうのは。相槌の間が、ちょっと遅えんだ。'},
+ {nar:'指摘は正確だった。'},
+ {c:'JIN',say:'警察と同じ顔されるくらいなら、一人で探す。'},
+ {hang:'相手側が切電',hangKind:'cut'},
+ {nar:'録音は、聞けなかった。'},
+ {nar:'——彼が握っていた証拠は、彼の疑念ごと、こちらの手から離れた。'},
+ {memo:['聞けなかった録音','ジンパチはレコーダーを渡さなかった。疑われていると感じたから。']},
+ {go:'jin_alone'},
+
  {n:'jin_end'},
  {c:'JIN',say:'な? おかしいだろ。あいつ、学校とっくに辞めてんだぞ。先生なんかいねえよ。'},
  {ch:[
-  {t:'調べてみます。あなたは一人で動かないでください',tag:'約束',eff:{'JIN.trust':10},set:{JIN_WAIT_1:1},go:'jin_alone'},
+  {t:'調べてみます。あなたは一人で動かないでください',tag:'約束',eff:{'JIN.doubt':-20,'JIN.trust':10},set:{JIN_WAIT_1:1},go:'jin_alone'},
   {t:'カナタさんの携帯番号を、教えてもらえますか',tag:'確認',eff:{'JIN.trust':6},set:{JIN_CANATA_NUM:1},go:'jin_num'},
   {t:'あなたが自分で探しに行くべきです',tag:'指摘',eff:{'JIN.trust':4,'JIN.fear':-10},set:{JIN_HOT:1},go:'jin_alone'}
  ]},
@@ -452,9 +469,9 @@ SCENARIO.ch2 = [
  {memo:['当直職員の証言','火災当夜、園児が電話をかけたと証言。放火犯として起訴、獄中死。']},
  {rel:['灯守園の火災','—— 放火犯とされた','当直職員']},
  {ch:[
-  {t:'あなたは、その職員が無実だと思っているんですね',tag:'傾聴',eff:{'GER.trust':10,'GER.stress':8},go:'ger_father'},
+  {t:'あなたは、その職員が無実だと思っているんですね',tag:'傾聴',eff:{'GER.doubt':-12,'GER.trust':10,'GER.stress':8},go:'ger_father'},
   {t:'ずいぶん詳しいですね。記者にしては',tag:'指摘',eff:{'GER.trust':-5,'GER.doubt':15},set:{GER_PRESSED:1},go:'ger_pressed'},
-  {t:'……',tag:'沈黙',silent:1,eff:{'GER.trust':6,'GER.stress':10},go:'ger_father',line:'（何も言わずに、続きを待った）'}
+  {t:'……',tag:'沈黙',silent:1,eff:{'GER.doubt':-12,'GER.trust':6,'GER.stress':10},go:'ger_father',line:'（何も言わずに、続きを待った）'}
  ]},
 
  {n:'ger_pressed'},
@@ -475,8 +492,8 @@ SCENARIO.ch2 = [
  {nar:'自嘲ではなかった。事実の確認だった。'},
  {set:{GER_FATHER:1}},
  {ch:[
-  {t:'十年、一人で調べてきたんですか',tag:'傾聴',eff:{'GER.trust':10,'GER.stress':-6},go:'ger_alone'},
-  {t:'証拠がないことと、無実でないことは、違います',tag:'受容',eff:{'GER.trust':12},go:'ger_alone'},
+  {t:'十年、一人で調べてきたんですか',tag:'傾聴',eff:{'GER.doubt':-12,'GER.trust':10,'GER.stress':-6},go:'ger_alone'},
+  {t:'証拠がないことと、無実でないことは、違います',tag:'受容',eff:{'GER.doubt':-15,'GER.trust':12},go:'ger_alone'},
   {t:'では、あなたの調査は思い込みかもしれない',tag:'指摘',eff:{'GER.trust':-8,'GER.stress':14},go:'ger_fear'}
  ]},
 
@@ -525,8 +542,8 @@ SCENARIO.ch2 = [
  {c:'GER',say:'無実だったぞ、と。それだけ言いに行きたい。'},
  {c:'GER',say:'十年、それだけのために動いている。馬鹿げているだろう。'},
  {ch:[
-  {t:'馬鹿げていません',tag:'受容',eff:{'GER.trust':10},go:'ger4',line:'……馬鹿げてなんか、いませんよ。'},
-  {t:'（黙って、その言葉を受け取った）',tag:'沈黙',silent:1,eff:{'GER.trust':8},go:'ger4',
+  {t:'馬鹿げていません',tag:'受容',eff:{'GER.doubt':-15,'GER.trust':10},go:'ger4',line:'……馬鹿げてなんか、いませんよ。'},
+  {t:'（黙って、その言葉を受け取った）',tag:'沈黙',silent:1,eff:{'GER.doubt':-12,'GER.trust':8},go:'ger4',
    line:'（あなたは何も言わずに、その言葉を受け取った）'}
  ]},
 

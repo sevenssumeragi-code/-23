@@ -40,8 +40,8 @@ SCENARIO.ch3 = [
  /* 章の看板台詞（design §4 第三章 事件）。ここから全部が始まる。 */
  {c:'HYU',say:'私の右目に映るものの話を、笑わずに聞いていただけますか。',slow:1},
  {ch:[
-  {t:'こんばんは。どうぞ、ゆっくり話してください',tag:'受容',eff:{'HYU.trust':8},go:'hyu_open'},
-  {t:'笑いません。ここは、そういう場所です',tag:'約束',eff:{'HYU.trust':12,'HYU.fear':-8},go:'hyu_open'},
+  {t:'こんばんは。どうぞ、ゆっくり話してください',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':8},go:'hyu_open'},
+  {t:'笑いません。ここは、そういう場所です',tag:'約束',eff:{'HYU.doubt':-20,'HYU.trust':12,'HYU.fear':-8},go:'hyu_open'},
   {t:'右目の話、とありましたね',tag:'確認',eff:{'HYU.trust':5,'HYU.fear':8},go:'hyu2'}
  ]},
 
@@ -66,8 +66,8 @@ SCENARIO.ch3 = [
  {nar:'語尾が、疑問形になっている。'},
  {nar:'確認を求める人間の言い方だ。誰に。'},
  {ch:[
-  {t:'わかりました。正常な人の話として聞きます',tag:'受容',eff:{'HYU.trust':12,'HYU.stress':-8},go:'hyu3'},
-  {t:'笑ったりしません。約束します',tag:'約束',eff:{'HYU.trust':14,'HYU.fear':-10},set:{HYU_PROMISE:1},go:'hyu3'},
+  {t:'わかりました。正常な人の話として聞きます',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':12,'HYU.stress':-8},go:'hyu3'},
+  {t:'笑ったりしません。約束します',tag:'約束',eff:{'HYU.doubt':-20,'HYU.trust':14,'HYU.fear':-10},set:{HYU_PROMISE:1},go:'hyu3'},
   {t:'いま、語尾が疑問形になりましたね',tag:'指摘',
    eff:{'HYU.trust':8,'HYU.doubt':5,'HYU.stress':10},set:{HYU_LIE_01:1},go:'hyu_lie'},
   {t:'まず、症状を教えてください',tag:'確認',eff:{'HYU.trust':-4,'HYU.stress':10},go:'hyu3',line:'まず、症状を教えてください。'}
@@ -93,8 +93,8 @@ SCENARIO.ch3 = [
  {nar:'ヒュウが右目の話をしているあいだだけ、線が鳴っている。'},
  {c:'HYU',say:'たとえば今、私の右目には、この街の上に別の空が重なって見えています。逆さの空です。'},
  {ch:[
-  {t:'それは、いつから見えるんですか',tag:'傾聴',eff:{'HYU.trust':8},go:'hyu4'},
-  {t:'……こわい話ですね。話してくれてありがとう',tag:'受容',eff:{'HYU.trust':14,'HYU.fear':-8},go:'hyu_mirror'},
+  {t:'それは、いつから見えるんですか',tag:'傾聴',eff:{'HYU.doubt':-12,'HYU.trust':8},go:'hyu4'},
+  {t:'……こわい話ですね。話してくれてありがとう',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':14,'HYU.fear':-8},go:'hyu_mirror'},
   {t:'その目のこと、誰かに話したことは?',tag:'確認',eff:{'HYU.trust':6,'HYU.fear':10},go:'hyu_mirror'},
   {t:'眼科か、心療内科の受診をおすすめします',tag:'説明',eff:{'HYU.trust':-18,'HYU.stress':20,'HYU.fear':10},set:{HYU_HURT:1},go:'hyu_hurt'}
  ]},
@@ -112,8 +112,8 @@ SCENARIO.ch3 = [
  {know:['HYU','右目を見た同級生に「化け物」と呼ばれた','以来、鏡が苦手で洗面所に布を掛けている']},
  {memo:['布を掛けた鏡','ヒュウは十年、洗面所の鏡に布を掛けている。右目を見せた同級生に化け物と呼ばれたため。']},
  {ch:[
-  {t:'私は、笑いませんでしたよ',tag:'受容',eff:{'HYU.trust':16,'HYU.fear':-12,'HYU.stress':-10},go:'hyu_wait'},
-  {t:'……つらかったですね',tag:'傾聴',eff:{'HYU.trust':12,'HYU.stress':-8},go:'hyu_wait'}
+  {t:'私は、笑いませんでしたよ',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':16,'HYU.fear':-12,'HYU.stress':-10},go:'hyu_wait'},
+  {t:'……つらかったですね',tag:'傾聴',eff:{'HYU.doubt':-12,'HYU.trust':12,'HYU.stress':-8},go:'hyu_wait'}
  ]},
 
  {n:'hyu_wait'},
@@ -160,7 +160,7 @@ SCENARIO.ch3 = [
   {t:'その「先生」は、カナタさんが呼んだ人と同じかもしれません',tag:'照合',req:{f:'JIN_TAPE'},eff:{'HYU.trust':10,'HYU.fear':15},set:{LINK_SENSEI:1},go:'hyu_link'},
   {t:'同じことを、別の子どもからも聞いています',tag:'照合',req:{f:'MUN_WHITE_ROOM'},eff:{'HYU.trust':12,'HYU.fear':12},set:{HYU_SUBJECT:1},go:'hyu_link'},
   {t:'その先生の顔は、覚えていますか',tag:'確認',eff:{'HYU.trust':6,'HYU.fear':10},go:'hyu5'},
-  {t:'つらい記憶を、よく話してくれました',tag:'受容',eff:{'HYU.trust':12,'HYU.stress':-10},go:'hyu5'}
+  {t:'つらい記憶を、よく話してくれました',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':12,'HYU.stress':-10},go:'hyu5'}
  ]},
 
  {n:'hyu_link'},
@@ -218,6 +218,9 @@ SCENARIO.ch3 = [
  {go:'hyu_eye'},
 
  {n:'hyu_eye'},
+ /* 追補 §1-2: 疑念35超で、ヒュウは右目のことを最後まで言わない。
+    HYU_EYE_01 が立たず、終章の NEO_HYU_01 が成立しなくなる。回復イベントは置かない。 */
+ {if:{dbt:['HYU',35]}, then:'hyu_eye_hide'},
  {noise:2},
  {nar:'長い沈黙。受話器の向こうで、前髪をかき上げる、かすかな衣擦れ。'},
  {nar:'電話越しに、前髪を上げる意味はない。'},
@@ -227,10 +230,27 @@ SCENARIO.ch3 = [
  {c:'HYU',say:'ですが、怖くて、黙っていたのです。私が言えば、私も連れて行かれると思って。'},
  {nar:'息を吸う音。細く、長く、途中で引っかかる。'},
  {ch:[
-  {t:'今、話してくれた。それで十分です',tag:'受容',eff:{'HYU.trust':20,'HYU.fear':-10,'HYU.stress':-15},set:{HYU_EYE_01:1},go:'hyu_wish'},
+  {t:'今、話してくれた。それで十分です',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':20,'HYU.fear':-10,'HYU.stress':-15},set:{HYU_EYE_01:1},go:'hyu_wish'},
   {t:'なぜ黙っていたんですか。人が消えているんですよ',tag:'指摘',eff:{'HYU.trust':-20,'HYU.stress':25,'HYU.fear':20},set:{HYU_BLAME:1},go:'hyu_blame'},
-  {t:'その目は、あなたを守るためにあったのかもしれません',tag:'受容',eff:{'HYU.trust':22,'HYU.fear':-15},set:{HYU_EYE_01:1},go:'hyu_wish'}
+  {t:'その目は、あなたを守るためにあったのかもしれません',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':22,'HYU.fear':-15},set:{HYU_EYE_01:1},go:'hyu_wish'}
  ]},
+
+ {n:'hyu_eye_hide'},
+ {noise:2},
+ {nar:'長い沈黙。'},
+ {nar:'前髪をかき上げる衣擦れが、途中で止まった。'},
+ {c:'HYU',say:'…………いえ。'},
+ {c:'HYU',say:'やはり、やめておきます。'},
+ {nar:'声の高さが、ひとつ上がっている。取り繕うときの高さだ。'},
+ {c:'HYU',say:'あなたは、私の話を「症状」として聞いておいでですね。'},
+ {c:'HYU',say:'……ふふ。いいのです。十年、そうやって聞かれてきましたから。'},
+ {nar:'いいのです、と言う人の声ではなかった。'},
+ {c:'HYU',say:'今夜は、このへんで。おやすみなさい。美しい夢を。'},
+ {hang:'相手側が切電',hangKind:'cut'},
+ {nar:'右目のことは、聞けなかった。'},
+ {nar:'——十年待っていた人を、十年目の夜に、もう一度待たせてしまった。'},
+ {memo:['言われなかったこと','ヒュウは右目の話を途中でやめた。疑われていると感じたから。']},
+ {go:'hyu6b'},
 
  {n:'hyu_blame'},
  {c:'HYU',say:'……ええ。ええ、そうです。私のせいです。'},
@@ -256,8 +276,8 @@ SCENARIO.ch3 = [
  {set:{HYU_WISH:1}},
  {memo:['ヒュウの願い','「この目を、誰かを助けるために一度でいいから使いたい」。']},
  {ch:[
-  {t:'その一度は、たぶん、もうすぐ来ます',tag:'約束',eff:{'HYU.trust':14},go:'hyu_defect'},
-  {t:'我儘ではありません。まっとうな願いです',tag:'受容',eff:{'HYU.trust':12,'HYU.stress':-8},go:'hyu_defect'}
+  {t:'その一度は、たぶん、もうすぐ来ます',tag:'約束',eff:{'HYU.doubt':-20,'HYU.trust':14},go:'hyu_defect'},
+  {t:'我儘ではありません。まっとうな願いです',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':12,'HYU.stress':-8},go:'hyu_defect'}
  ]},
 
  /* 回収: ナルシシズム＝「欠陥品」の裏返し（design §4 第三章 回収する伏線）
@@ -274,13 +294,15 @@ SCENARIO.ch3 = [
  {know:['HYU','実験で「欠陥品」と呼ばれた記憶がある','自賛はその裏返しだと自覚している']},
  {memo:['欠陥品','ヒュウは「先生」に欠陥品と呼ばれていた。「私は完璧です」はその裏返し。']},
  {ch:[
-  {t:'ばかばかしくないです。よく持ちこたえました',tag:'受容',eff:{'HYU.trust':16,'HYU.stress':-12},go:'hyu6'},
-  {t:'……',tag:'沈黙',silent:1,eff:{'HYU.trust':10,'HYU.stress':-6},go:'hyu6',
+  {t:'ばかばかしくないです。よく持ちこたえました',tag:'受容',eff:{'HYU.doubt':-15,'HYU.trust':16,'HYU.stress':-12},go:'hyu6'},
+  {t:'……',tag:'沈黙',silent:1,eff:{'HYU.doubt':-12,'HYU.trust':10,'HYU.stress':-6},go:'hyu6',
    line:'（あなたは何も言わず、その告白を受け取った）'}
  ]},
 
  {n:'hyu6'},
  {hang:'通話終了',hangKind:'normal'},
+
+ {n:'hyu6b'},          /* 疑念で右目を聞けなかった場合の合流先（切電済み） */
  {noise:0},
  {clock:'03:10'},
  {nar:'通話のあと、あなたはしばらく受話器を戻せなかった。'},
@@ -350,7 +372,7 @@ SCENARIO.ch3 = [
    eff:{'HYU.fear':10},set:{HYU_ALONE:1},go:'hyu_run_alone'},
   {t:'落ち着いて。まず現在地を教えてください',tag:'確認',
    eff:{'HYU.stress':15},go:'hyu_run_addr'},
-  {t:'（言葉に詰まる）',tag:'沈黙',silent:1,timeout:1,eff:{'HYU.fear':20,'HYU.trust':-10},go:'hyu_run_alone'}
+  {t:'（言葉に詰まる）',tag:'沈黙',silent:1,timeout:1,eff:{'HYU.doubt':-12,'HYU.fear':20,'HYU.trust':-10},go:'hyu_run_alone'}
  ]},
 
  {n:'hyu_relay'},
@@ -373,7 +395,7 @@ SCENARIO.ch3 = [
  {evd:['失踪者の所在','澪原第二工業団地の廃工場に、六人が立ったまま眠っている。']},
  {sec:8},
  {ch:[
-  {t:'よく言えました。切りませんから、そのまま喋って',tag:'伴走',eff:{'HYU.trust':20,'HYU.fear':-15},set:{HYU_STAY_01:1},go:'hyu_run_stay'},
+  {t:'よく言えました。切りませんから、そのまま喋って',tag:'伴走',eff:{'HYU.doubt':-15,'HYU.trust':20,'HYU.fear':-15},set:{HYU_STAY_01:1},go:'hyu_run_stay'},
   {t:'切って走りなさい',tag:'指示',set:{HYU_ALONE:1},timeout:1,go:'hyu_run_alone'}
  ]},
 
@@ -469,7 +491,7 @@ SCENARIO.ch3 = [
   {t:'ムニ。それ、絶対に忘れないで。怖くなったら私の声を思い出して',tag:'教える',
    eff:{'MUN.trust':18,'MUN.fear':-20},set:{MUN_TEACH_03:1},go:'ch3_mun3',
    line:'ムニ。それ、絶対に忘れないで。——本当に怖いときは、私の声を思い出すんだよ。'},
-  {t:'ありがとう。ムニは強いね',tag:'受容',eff:{'MUN.trust':8},go:'ch3_mun3'}
+  {t:'ありがとう。ムニは強いね',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':8},go:'ch3_mun3'}
  ]},
 
  {n:'ch3_mun3'},

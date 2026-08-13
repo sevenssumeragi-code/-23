@@ -26,9 +26,9 @@ SCENARIO.ch1 = [
  {nar:'語尾がゆっくりと落ちていく。眠そうというより、声そのものが半分どこかに置き忘れられているような話し方だ。'},
  {nar:'受話器の向こうで、布が擦れる音。寝転がって話しているらしい。'},
  {ch:[
-  {t:'記録更新はすごいけど、心配です',tag:'傾聴',eff:{'LEN.trust':6},go:'d2_len_a'},
+  {t:'記録更新はすごいけど、心配です',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':6},go:'d2_len_a'},
   {t:'昨日より眠いということ?',tag:'確認',eff:{'LEN.trust':5},go:'d2_len_b'},
-  {t:'（相槌だけ打って、続きを待つ）',tag:'沈黙',silent:1,eff:{'LEN.trust':4,'LEN.stress':2},go:'d2_len_c',
+  {t:'（相槌だけ打って、続きを待つ）',tag:'沈黙',silent:1,eff:{'LEN.doubt':-12,'LEN.trust':4,'LEN.stress':2},go:'d2_len_c',
    line:'（うん、と短く相槌を打っただけで、あとは黙っていた）'}
  ]},
 
@@ -59,8 +59,8 @@ SCENARIO.ch1 = [
   {t:'悩みがない人は、こんな時間にここへ電話しません',tag:'指摘',
    eff:{'LEN.trust':6,'LEN.stress':4},set:{LEN_LIE_01:1},go:'d2_lie_see',
    line:'……悩みがない人は、こんな時間に、ここへ電話しませんよ。'},
-  {t:'そう。じゃあ、眠い話をもっと聞かせて',tag:'受容',eff:{'LEN.trust':8,'LEN.stress':-4},go:'d2_lie_pass'},
-  {t:'（何も言わずに、待つ）',tag:'沈黙',silent:1,eff:{'LEN.trust':5},go:'d2_lie_wait',
+  {t:'そう。じゃあ、眠い話をもっと聞かせて',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':8,'LEN.stress':-4},go:'d2_lie_pass'},
+  {t:'（何も言わずに、待つ）',tag:'沈黙',silent:1,eff:{'LEN.doubt':-12,'LEN.trust':5},go:'d2_lie_wait',
    line:'（あなたは、その言葉を否定も肯定もしなかった）'}
  ]},
 
@@ -102,7 +102,7 @@ SCENARIO.ch1 = [
  {set:{LEN_333:1}},
  {memo:['3:33','レニィは毎晩3時33分に目が覚める。目覚ましは使っていない。']},
  {ch:[
-  {t:'その時、何か聞こえる?',tag:'傾聴',eff:{'LEN.trust':8},go:'d2_len3'},
+  {t:'その時、何か聞こえる?',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':8},go:'d2_len3'},
   {t:'目が覚めたあとは、どうしているの?',tag:'確認',eff:{'LEN.trust':6},go:'d2_len3b'},
   {t:'偶然でしょう。体内時計です',tag:'説明',eff:{'LEN.trust':-3,'LEN.stress':4},go:'d2_len_deny'}
  ]},
@@ -114,8 +114,8 @@ SCENARIO.ch1 = [
  {know:['LEN','毎晩3:33に目が覚める。繋がっていない家電話の音が聞こえる気がする']},
  {set:{LEN_PHONE_HINT:1}},
  {ch:[
-  {t:'その電話、取ろうと思ったことはある?',tag:'傾聴',eff:{'LEN.trust':7,'LEN.fear':6},go:'d2_len3c'},
-  {t:'（黙って、次の言葉を待つ）',tag:'沈黙',silent:1,eff:{'LEN.trust':5},go:'d2_dream',
+  {t:'その電話、取ろうと思ったことはある?',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':7,'LEN.fear':6},go:'d2_len3c'},
+  {t:'（黙って、次の言葉を待つ）',tag:'沈黙',silent:1,eff:{'LEN.doubt':-12,'LEN.trust':5},go:'d2_dream',
    line:'（あなたは何も言わず、受話器を耳に当てたままでいた）'}
  ]},
 
@@ -149,8 +149,8 @@ SCENARIO.ch1 = [
  {c:'LEN',say:'僕さ、夢の中でいつも、同じ子と喋ってるんだよ。'},
  {nar:'眠そうな声のまま、けれど言葉の選び方だけが急に丁寧になった。大事に扱っている話題だと分かる。'},
  {ch:[
-  {t:'その子、どんな子?',tag:'傾聴',eff:{'LEN.trust':9},go:'d2_dream2'},
-  {t:'夢の中で、何を話しているの?',tag:'傾聴',eff:{'LEN.trust':8},go:'d2_dream2b'},
+  {t:'その子、どんな子?',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':9},go:'d2_dream2'},
+  {t:'夢の中で、何を話しているの?',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':8},go:'d2_dream2b'},
   {t:'夢の話は、あまり意味がありませんよ',tag:'指摘',eff:{'LEN.trust':-8,'LEN.stress':8},go:'d2_dream_cut'}
  ]},
 
@@ -192,7 +192,7 @@ SCENARIO.ch1 = [
  {memo:['レニィの鼻歌','無意識に口ずさむ四小節の旋律。一箇所だけ半音ずれている。']},
  {ch:[
   {t:'いま歌っていたの、なんの歌?',tag:'確認',eff:{'LEN.trust':5},go:'d2_hum_ask'},
-  {t:'（歌を、最後まで聞く）',tag:'沈黙',silent:1,eff:{'LEN.trust':7,'LEN.stress':-5},go:'d2_hum_listen',
+  {t:'（歌を、最後まで聞く）',tag:'沈黙',silent:1,eff:{'LEN.doubt':-12,'LEN.trust':7,'LEN.stress':-5},go:'d2_hum_listen',
    line:'（あなたは口を挟まず、その歌が終わるまで聞いていた）'}
  ]},
 
@@ -220,7 +220,7 @@ SCENARIO.ch1 = [
  {ch:[
   {t:'レニィ。家の場所を、だいたいでいいから教えてくれる?',tag:'確認',
    eff:{'LEN.trust':4},go:'d2_rain_ask'},
-  {t:'（雨音のことは、今夜も口に出さない）',tag:'沈黙',silent:1,eff:{'LEN.trust':2},go:'d2_len4',
+  {t:'（雨音のことは、今夜も口に出さない）',tag:'沈黙',silent:1,eff:{'LEN.doubt':-12,'LEN.trust':2},go:'d2_len4',
    line:'（あなたは、雨音のことを口に出さなかった）'}
  ]},
 
@@ -291,7 +291,7 @@ SCENARIO.ch1 = [
  {nar:'ボタンを押す音が、まだ続いている。会話の最中も、指が数字を押し続けている。'},
  {meet:'MUN',known:['幼い男の子。5歳くらい','雨の音の中から電話をかけている']},
  {ch:[
-  {t:'もしもし。こんばんは。おなまえ、教えてくれる?',tag:'受容',eff:{'MUN.trust':10},go:'mun2'},
+  {t:'もしもし。こんばんは。おなまえ、教えてくれる?',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':10},go:'mun2'},
   {t:'こんな時間だよ。おうちの人は?',tag:'確認',eff:{'MUN.trust':4,'MUN.fear':6},go:'mun2'},
   {t:'いたずら電話なら切りますよ',tag:'切電',eff:{'MUN.trust':-20,'MUN.fear':15},inc:{MUN_CUT_XX:1},go:'mun_cut1'}
  ]},
@@ -313,7 +313,7 @@ SCENARIO.ch1 = [
  {call:{who:'ムニ(5歳)',c:'MUN',num:'0X-XXX-1994'}},
  {c:'MUN',say:'ムニだよ。5さい。……おねえちゃん? おにいちゃん? どっち?'},
  {ch:[
-  {t:'どっちでもいいよ。電話のひと、でいい',tag:'受容',eff:{'MUN.trust':10},go:'mun2b'},
+  {t:'どっちでもいいよ。電話のひと、でいい',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':10},go:'mun2b'},
   {t:'（名前を名乗る)',tag:'信頼',eff:{'MUN.trust':8},go:'mun2b',line:'（あなたは、自分の名前を名乗った）'}
  ]},
 
@@ -325,7 +325,7 @@ SCENARIO.ch1 = [
  {c:'MUN',say:'あのね。でんわのひとのこえ、ムニ、しってるきがする。',slow:1},
  {ch:[
   {t:'会ったことがあるかな?',tag:'確認',eff:{'MUN.trust':4},go:'mun2c'},
-  {t:'そうかもしれないね',tag:'受容',eff:{'MUN.trust':8},go:'mun2c',line:'……そうかもしれないね。'}
+  {t:'そうかもしれないね',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':8},go:'mun2c',line:'……そうかもしれないね。'}
  ]},
 
  {n:'mun2c'},
@@ -342,9 +342,9 @@ SCENARIO.ch1 = [
  {nar:'——昨夜、レニィの通話の背後で聞いたのと、同じ雨音だ。'},
  {nar:'同じ「ような」ではない。強さも、間隔も、屋根に当たる高さも、同じだ。'},
  {ch:[
-  {t:'おにいちゃんに、会いたい?',tag:'傾聴',eff:{'MUN.trust':12},go:'mun_bro_want'},
+  {t:'おにいちゃんに、会いたい?',tag:'傾聴',eff:{'MUN.doubt':-12,'MUN.trust':12},go:'mun_bro_want'},
   {t:'そのお兄ちゃんの名前、教えてくれる?',tag:'確認',eff:{'MUN.trust':3,'MUN.fear':4},go:'mun_bro'},
-  {t:'こわいね。じゃあ、眠るまで一緒にいるよ',tag:'受容',eff:{'MUN.trust':15,'MUN.fear':-10},set:{MUN_STAY_1:1},go:'mun4'},
+  {t:'こわいね。じゃあ、眠るまで一緒にいるよ',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':15,'MUN.fear':-10},set:{MUN_STAY_1:1},go:'mun4'},
   {t:'そこはどこ? 住所は分かる?',tag:'確認',eff:{'MUN.trust':2,'MUN.fear':8},go:'mun_addr'}
  ]},
 
@@ -411,7 +411,7 @@ SCENARIO.ch1 = [
  {c:'MUN',say:'ねえ、しってる? ここね、ずっとなつなんだよ。',slow:1},
  {ch:[
   {t:'ずっと夏? どういうこと?',tag:'確認',eff:{'MUN.trust':4},go:'mun5'},
-  {t:'そうだね。夏だね',tag:'受容',eff:{'MUN.trust':6},go:'mun5',line:'そうだね。ずっと夏だね。'}
+  {t:'そうだね。夏だね',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':6},go:'mun5',line:'そうだね。ずっと夏だね。'}
  ]},
 
  {n:'mun5'},
@@ -423,7 +423,7 @@ SCENARIO.ch1 = [
  {memo:['夏祭りの約束','ムニは明日、兄と夏祭りに行く約束をしている。「ここはずっと夏」。']},
  {set:{MUN_FESTIVAL:1}},
  {ch:[
-  {t:'いいね。半分こ、楽しみだね',tag:'受容',eff:{'MUN.trust':8},go:'mun_hum'},
+  {t:'いいね。半分こ、楽しみだね',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':8},go:'mun_hum'},
   {t:'ムニ。「まえも夏」って、どういうこと?',tag:'指摘',eff:{'MUN.trust':2,'MUN.fear':5},go:'mun_summer_ask'}
  ]},
 
@@ -486,9 +486,9 @@ SCENARIO.ch1 = [
  {c:'MUN',say:'ねえ、また、おはなししてくれる?'},
  {sec:9},
  {ch:[
-  {t:'するよ。約束する。必ずまた出るから',tag:'約束',eff:{'MUN.trust':20,'MUN.fear':-15},set:{MUN_PROMISE:1},go:'mun_end'},
+  {t:'するよ。約束する。必ずまた出るから',tag:'約束',eff:{'MUN.doubt':-20,'MUN.trust':20,'MUN.fear':-15},set:{MUN_PROMISE:1},go:'mun_end'},
   {t:'……気をつけて。何かあったら、すぐかけて',tag:'配慮',eff:{'MUN.trust':10},go:'mun_end'},
-  {t:'（言葉に迷っているうちに）',tag:'沈黙',silent:1,timeout:1,eff:{'MUN.trust':-5,'MUN.fear':10},go:'mun_end'}
+  {t:'（言葉に迷っているうちに）',tag:'沈黙',silent:1,timeout:1,eff:{'MUN.doubt':-12,'MUN.trust':-5,'MUN.fear':10},go:'mun_end'}
  ]},
 
  {n:'mun_end'},
@@ -544,7 +544,7 @@ SCENARIO.ch1 = [
  {c:'LEN',say:'僕、小さい頃の記憶がぜんぜんないんだよ。七歳より前が、まるごと。'},
  {nar:'受話器の向こうで、何かを指で弾く音。爪で机を叩いている。落ち着かないときの癖だろう。'},
  {ch:[
-  {t:'それは、いつから気づいていたの?',tag:'傾聴',eff:{'LEN.trust':8},go:'d3_len_when'},
+  {t:'それは、いつから気づいていたの?',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':8},go:'d3_len_when'},
   {t:'思い出そうとすると、どうなる?',tag:'確認',eff:{'LEN.trust':6,'LEN.fear':8},go:'d3_len2'},
   {t:'誰にでもあることです',tag:'説明',eff:{'LEN.trust':-6,'LEN.stress':8},go:'d3_len3'}
  ]},
@@ -591,8 +591,8 @@ SCENARIO.ch1 = [
  {nar:'雑音が引いた。話題が逸れたとたんに、線が澄む。'},
  {nar:'また、あの逃げ方だ。'},
  {ch:[
-  {t:'忘れないよ。あなたが話したことは、ちゃんと預かる',tag:'受容',eff:{'LEN.trust':14,'LEN.stress':-10},set:{LEN_KEEP:1},go:'d3_keep'},
-  {t:'わかりました。忘れます',tag:'受容',eff:{'LEN.trust':-4},go:'d3_end',line:'わかりました。忘れておきます。'}
+  {t:'忘れないよ。あなたが話したことは、ちゃんと預かる',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':14,'LEN.stress':-10},set:{LEN_KEEP:1},go:'d3_keep'},
+  {t:'わかりました。忘れます',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':-4},go:'d3_end',line:'わかりました。忘れておきます。'}
  ]},
 
  {n:'d3_keep'},
@@ -658,7 +658,7 @@ SCENARIO.ch1 = [
  {nar:'ただし、ムニの側の囃子には、いま商店街で使われていない古い節が混ざっている。'},
  {nar:'あなたが子どもの頃に一度だけ聞いて、いつのまにか聞かなくなった節だ。'},
  {ch:[
-  {t:'よかったね。お兄ちゃん、優しいんだね',tag:'受容',eff:{'MUN.trust':12},go:'mun_d4_bro'},
+  {t:'よかったね。お兄ちゃん、優しいんだね',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':12},go:'mun_d4_bro'},
   {t:'そっちのお囃子、こっちと少し違うみたい',tag:'確認',eff:{'MUN.trust':4},go:'mun_d4_song'},
   {t:'ムニ。今日は、何年の何月何日か分かる?',tag:'確認',eff:{'MUN.trust':2},set:{MUN_DATE_ASK:1},go:'mun_date'}
  ]},
@@ -693,7 +693,7 @@ SCENARIO.ch1 = [
  {set:{MUN_DATE_GAP:1}},
  {ch:[
   {t:'そのカレンダー、数字だけでも読んでみてくれる?',tag:'確認',eff:{'MUN.trust':5},go:'mun_date2'},
-  {t:'うん、わかった。教えてくれてありがとう',tag:'受容',eff:{'MUN.trust':8},go:'mun_d4b'}
+  {t:'うん、わかった。教えてくれてありがとう',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':8},go:'mun_d4b'}
  ]},
 
  {n:'mun_date2'},
@@ -721,7 +721,7 @@ SCENARIO.ch1 = [
   {t:'ムニ。もし本当に煙が出たら、体を低くして、床を這って逃げるんだよ',tag:'教える',
    eff:{'MUN.trust':10,'MUN.fear':-5},set:{MUN_TEACH_01:1},go:'mun_teach1',
    line:'ムニ、よく聞いて。もし本当に煙が出たら——体を低くして、床を這って逃げるんだよ。'},
-  {t:'大丈夫、夢だよ。こわくないよ',tag:'受容',eff:{'MUN.trust':8,'MUN.fear':-8},go:'mun_d4_calm'},
+  {t:'大丈夫、夢だよ。こわくないよ',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':8,'MUN.fear':-8},go:'mun_d4_calm'},
   {t:'その夢、いつから見ているの?',tag:'確認',eff:{'MUN.trust':4},go:'mun_dream_when'}
  ]},
 
@@ -753,7 +753,7 @@ SCENARIO.ch1 = [
  {c:'MUN',say:'……ねえ、でんわのひと。ないしょのはなし、していい?'},
  {nar:'声がまた小さくなった。手で受話器を囲う音。'},
  {ch:[
-  {t:'いいよ。誰にも言わない',tag:'約束',eff:{'MUN.trust':12},go:'mun_white2'},
+  {t:'いいよ。誰にも言わない',tag:'約束',eff:{'MUN.doubt':-20,'MUN.trust':12},go:'mun_white2'},
   {t:'話したくなったら、でいいからね',tag:'配慮',eff:{'MUN.trust':8},go:'mun_white2'}
  ]},
 
@@ -779,7 +779,7 @@ SCENARIO.ch1 = [
  {c:'MUN',say:'でんわのひとのこえ、まくらもとにおいてねたいなぁ。',slow:1},
  /* 【反転】回収=TRUE END。十五歳になったムニが、同じ言葉を照れながら言う。 */
  {ch:[
-  {t:'眠るまで、ここにいるよ。切らないから',tag:'受容',eff:{'MUN.trust':18,'MUN.fear':-12,'MUN.stress':-10},set:{MUN_STAY_2:1},go:'mun_sleep'},
+  {t:'眠るまで、ここにいるよ。切らないから',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':18,'MUN.fear':-12,'MUN.stress':-10},set:{MUN_STAY_2:1},go:'mun_sleep'},
   {t:'おやすみ。また明日',tag:'配慮',eff:{'MUN.trust':6},go:'mun_sleep2'}
  ]},
 

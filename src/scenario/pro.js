@@ -138,7 +138,7 @@ SCENARIO.pro = [
  {nar:'思っていたより、ずっと普通の音だった。'},
  {ch:[
   {t:'受話器を取る',tag:'受電',go:'len_call'},
-  {t:'……少し、深呼吸してから取る',tag:'傾聴',eff:{'LEN.trust':5},go:'len_call',line:'（一度深呼吸してから、受話器を上げた）'}
+  {t:'……少し、深呼吸してから取る',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':5},go:'len_call',line:'（一度深呼吸してから、受話器を上げた）'}
  ]},
 
  {n:'len_call'},
@@ -172,9 +172,9 @@ SCENARIO.pro = [
 
  {n:'len_ask'},
  {ch:[
-  {t:'はい。みおはらラインです。どんなことでも',tag:'受容',eff:{'LEN.trust':6},go:'len1'},
+  {t:'はい。みおはらラインです。どんなことでも',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':6},go:'len1'},
   {t:'合っています。お名前は言わなくて大丈夫ですよ',tag:'配慮',eff:{'LEN.trust':8,'LEN.stress':-3},go:'len1'},
-  {t:'……',tag:'沈黙',silent:1,eff:{'LEN.trust':2,'LEN.stress':3},go:'len_silent',line:'（黙って、相手の言葉を待った）'}
+  {t:'……',tag:'沈黙',silent:1,eff:{'LEN.doubt':-12,'LEN.trust':2,'LEN.stress':3},go:'len_silent',line:'（黙って、相手の言葉を待った）'}
  ]},
 
  {n:'len_silent'},
@@ -195,7 +195,7 @@ SCENARIO.pro = [
  {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
  {nar:'ほわほわした、力の抜けた声。深刻さはまるでない——けれど、こんな時間に、こんな番号にかけてくる。'},
  {ch:[
-  {t:'三回はすごいね。よく眠れていないの?',tag:'傾聴',eff:{'LEN.trust':8},go:'len_three'},
+  {t:'三回はすごいね。よく眠れていないの?',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':8},go:'len_three'},
   {t:'夜、何時に寝ているんですか',tag:'確認',eff:{'LEN.trust':4},go:'len_hour'},
   {t:'それは怒られても仕方ないのでは',tag:'指摘',eff:{'LEN.trust':-4,'LEN.stress':5},go:'len_scold',line:'それは、怒られても仕方ないのでは?'}
  ]},
@@ -227,8 +227,8 @@ SCENARIO.pro = [
  {c:'LEN',say:'でも、なんか、寝ても寝ても眠いんだよぉ。夢の中でずっと誰かと喋ってる感じがして。'},
  {know:['LEN','寝ても寝ても眠い。夢で誰かと喋っている感覚がある']},
  {ch:[
-  {t:'夢の中の誰かって、どんな人?',tag:'傾聴',eff:{'LEN.trust':7},go:'len3a'},
-  {t:'疲れているのかもしれませんね',tag:'受容',eff:{'LEN.trust':3},go:'len3b'},
+  {t:'夢の中の誰かって、どんな人?',tag:'傾聴',eff:{'LEN.doubt':-12,'LEN.trust':7},go:'len3a'},
+  {t:'疲れているのかもしれませんね',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':3},go:'len3b'},
   {t:'それは夢ではないかもしれない',tag:'指摘',eff:{'LEN.fear':10,'LEN.trust':-2},go:'len3b',line:'……それは、夢ではないのかもしれませんよ。'}
  ]},
 
@@ -239,7 +239,7 @@ SCENARIO.pro = [
  {memo:['レニィの夢','夢で誰かと喋っている。目覚めると喉が痛い。内容は覚えていない。']},
  {c:'LEN',say:'変だよねぇ。夢で喋って、喉が痛くなるとかある?'},
  {ch:[
-  {t:'ありますよ。寝言かもしれませんね',tag:'受容',eff:{'LEN.trust':6},go:'len_dream2'},
+  {t:'ありますよ。寝言かもしれませんね',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':6},go:'len_dream2'},
   {t:'……ない、と思います',tag:'誠実',eff:{'LEN.trust':4},go:'len_dream2',line:'……正直に言うと、あまり聞いたことがありません。'}
  ]},
 
@@ -288,9 +288,9 @@ SCENARIO.pro = [
  {nar:'声が、少しだけ小さくなった。'},
  {nar:'——ここで切られると思っている人の、下がり方だ。'},
  {ch:[
-  {t:'つまらなくないよ。眠れない夜は、それだけで相談する理由になる',tag:'受容',eff:{'LEN.trust':12,'LEN.stress':-8},go:'len6'},
-  {t:'もっと重い相談じゃないと駄目、なんて決まりはありません',tag:'受容',eff:{'LEN.trust':10,'LEN.stress':-6},go:'len6'},
-  {t:'（何も言わず、続きを待つ）',tag:'沈黙',silent:1,eff:{'LEN.trust':7},go:'len6',
+  {t:'つまらなくないよ。眠れない夜は、それだけで相談する理由になる',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':12,'LEN.stress':-8},go:'len6'},
+  {t:'もっと重い相談じゃないと駄目、なんて決まりはありません',tag:'受容',eff:{'LEN.doubt':-15,'LEN.trust':10,'LEN.stress':-6},go:'len6'},
+  {t:'（何も言わず、続きを待つ）',tag:'沈黙',silent:1,eff:{'LEN.doubt':-12,'LEN.trust':7},go:'len6',
    line:'（あなたは否定も肯定もせず、ただ待っていた）'},
   {t:'では、そろそろ切りましょうか',tag:'切電',eff:{'LEN.trust':-12,'LEN.stress':10},set:{CUT_LEN_PRO:1},go:'len_cut'}
  ]},
@@ -300,7 +300,7 @@ SCENARIO.pro = [
  {c:'LEN',say:'ねえ、また電話していい? 眠れないとき。'},
  /* 【反転】回収=五章。レニィが本当にかけられなくなる夜が来る。 */
  {ch:[
-  {t:'いつでも。私はここにいます',tag:'約束',eff:{'LEN.trust':10},set:{LEN_PROMISE:1},go:'len_end'},
+  {t:'いつでも。私はここにいます',tag:'約束',eff:{'LEN.doubt':-20,'LEN.trust':10},set:{LEN_PROMISE:1},go:'len_end'},
   {t:'ええ。ただし、無理に起きていないでね',tag:'配慮',eff:{'LEN.trust':7},set:{LEN_PROMISE:1},go:'len_end'}
  ]},
 

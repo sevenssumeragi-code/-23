@@ -125,7 +125,7 @@ SCENARIO.fin = [
  {nar:'布が擦れる音。受話器を、両手で抱え直したのだろう。'},
  {c:'MUN',say:'……ねえ。あしたも、おはなしできる?'},
  {ch:[
-  {t:'できる。必ず、明日もここにいる',tag:'約束',eff:{'MUN.trust':20},set:{MUN_PROMISE2:1},go:'prep_loop'}
+  {t:'できる。必ず、明日もここにいる',tag:'約束',eff:{'MUN.doubt':-20,'MUN.trust':20},set:{MUN_PROMISE2:1},go:'prep_loop'}
  ]},
 
  {n:'prep_loop'},
@@ -225,7 +225,7 @@ SCENARIO.fin = [
   {t:'二人とも、灰堂の左足を見て。跛行が証拠になる',tag:'指示',req:{f:'KAI_EXPOSE_01'},
    set:{PLAN_A:1},go:'line1b'},
   {t:'突っ込め',tag:'指示',eff:{'JIN.fear':20},go:'line1c'},
-  {t:'（沈黙）',tag:'沈黙',silent:1,timeout:1,eff:{'JIN.fear':15},go:'line1c'}
+  {t:'（沈黙）',tag:'沈黙',silent:1,timeout:1,eff:{'JIN.doubt':-12,'JIN.fear':15},go:'line1c'}
  ]},
 
  {n:'line1c'},
@@ -366,15 +366,29 @@ SCENARIO.fin = [
  {sys:'ここから先の一言一言が、十年前を書き換えます。'},
  {sec:20},
  {ch:[
-  {t:'ムニ! 落ち着いて。煙が出たら、どうするんだった?',tag:'教える',req:{and:[{f:'MUN_TEACH_01'},{nf:'FIN_LOW'}]},
+  {t:'ムニ! 落ち着いて。煙が出たら、どうするんだった?',tag:'教える',req:{and:[{f:'MUN_TEACH_01'},{nf:'FIN_LOW'},{ndbt:['MUN',30]}]},
    eff:{'MUN.fear':-15,'MUN.trust':10},go:'fin_t1'},
-  {t:'廊下の奥、消火栓の箱! 中の鍵で裏の物置から外へ!',tag:'教える',req:{and:[{f:'MUN_TEACH_02'},{nf:'FIN_KEY'}]},
+  {t:'廊下の奥、消火栓の箱! 中の鍵で裏の物置から外へ!',tag:'教える',req:{and:[{f:'MUN_TEACH_02'},{nf:'FIN_KEY'},{ndbt:['MUN',30]}]},
    eff:{'MUN.fear':-15},go:'fin_t2'},
-  {t:'ムニ。私の声を思い出して。いま、ここにいるから',tag:'伴走',req:{and:[{f:'MUN_TEACH_03'},{nf:'FIN_VOICE'}]},
+  {t:'ムニ。私の声を思い出して。いま、ここにいるから',tag:'伴走',req:{and:[{f:'MUN_TEACH_03'},{nf:'FIN_VOICE'},{ndbt:['MUN',30]}]},
    eff:{'MUN.fear':-25,'MUN.trust':15},go:'fin_t3'},
+  /* 追補 §1-5: ムニの回復イベント。疑念30以上のときだけ現れ、一度だけ通れる。
+     ここを通らないと、教えたことを信じてもらえず逃がせない。 */
+  {t:'ムニ、聞いて。私は一度も、君に嘘をついたことがない。そうだよね?',tag:'信頼回復',
+   hide:{and:[{dbt:['MUN',30]},{nf:'MUN_RECOVER'}]},
+   eff:{'MUN.doubt':-45,'MUN.trust':10},set:{MUN_RECOVER:1},go:'fin_recover'},
   {t:'いま助けを呼ぶから、動かないで!',tag:'指示',eff:{'MUN.fear':10},go:'fin_wrong'},
-  {t:'（言葉が出ない）',tag:'沈黙',silent:1,timeout:1,eff:{'MUN.fear':25},go:'fin_wrong'}
+  {t:'（言葉が出ない）',tag:'沈黙',silent:1,timeout:1,eff:{'MUN.doubt':-12,'MUN.fear':25},go:'fin_wrong'}
  ]},
+
+ {n:'fin_recover'},
+ {nar:'火の音の向こうで、幼い呼吸が、一度だけ止まった。'},
+ {c:'MUN',say:'…………うん。'},
+ {c:'MUN',say:'でんわのひとは、うそ、つかない。'},
+ {nar:'この二週間、こちらが積み上げたものと、削ったものの、両方の答えだった。'},
+ {c:'MUN',say:'……ムニ、きく。ちゃんときく。'},
+ {memo:['信じ直してもらえた夜','疑いを持たれたまま終章に入ったが、ムニは最後にもう一度こちらを信じた。']},
+ {go:'fin_loop'},
 
  {n:'fin_t1'},
  {c:'MUN',say:'ひくく……はって……にげる!'},
@@ -418,9 +432,9 @@ SCENARIO.fin = [
  {n:'line3_again'},
  {sec:18},
  {ch:[
-  {t:'煙が出たら、どうするんだった?',tag:'教える',req:{and:[{f:'MUN_TEACH_01'},{nf:'FIN_LOW'}]},go:'fin_t1'},
-  {t:'消火栓の箱の鍵! 裏の物置から外へ!',tag:'教える',req:{and:[{f:'MUN_TEACH_02'},{nf:'FIN_KEY'}]},go:'fin_t2'},
-  {t:'私の声を思い出して。ここにいる',tag:'伴走',req:{and:[{f:'MUN_TEACH_03'},{nf:'FIN_VOICE'}]},go:'fin_t3'},
+  {t:'煙が出たら、どうするんだった?',tag:'教える',req:{and:[{f:'MUN_TEACH_01'},{nf:'FIN_LOW'},{ndbt:['MUN',30]}]},go:'fin_t1'},
+  {t:'消火栓の箱の鍵! 裏の物置から外へ!',tag:'教える',req:{and:[{f:'MUN_TEACH_02'},{nf:'FIN_KEY'},{ndbt:['MUN',30]}]},go:'fin_t2'},
+  {t:'私の声を思い出して。ここにいる',tag:'伴走',req:{and:[{f:'MUN_TEACH_03'},{nf:'FIN_VOICE'},{ndbt:['MUN',30]}]},go:'fin_t3'},
   {t:'ムニ、お兄ちゃんが外で待ってる。走って',tag:'励まし',req:{and:[{f:'LEN_REMEMBER'},{nf:'FIN_RUN'}]},
    eff:{'MUN.fear':-20,'MUN.trust':10},go:'fin_bro'},
   {t:'（もう言えることがない）',tag:'沈黙',silent:1,timeout:1,go:'fin_close'}

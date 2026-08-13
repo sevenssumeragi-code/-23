@@ -101,7 +101,7 @@ SCENARIO.ch4 = [
   {t:'あなたが、人を攫っているのか',tag:'追及',eff:{'NEO.doubt':20,'NEO.trust':-5},go:'neo2'},
   {t:'……あなたは、誰ですか',tag:'確認',eff:{'NEO.trust':5},go:'neo2'},
   {t:'ヒュウを返してください',tag:'交渉',eff:{'NEO.trust':8},go:'neo2'},
-  {t:'（何も言わず、ただ聞く）',tag:'沈黙',silent:1,eff:{'NEO.trust':10},go:'neo_wait',line:'（あなたは何も言わず、聞くことに徹した）'}
+  {t:'（何も言わず、ただ聞く）',tag:'沈黙',silent:1,eff:{'NEO.doubt':-12,'NEO.trust':10},go:'neo_wait',line:'（あなたは何も言わず、聞くことに徹した）'}
  ]},
 
  {n:'neo_wait'},
@@ -202,9 +202,9 @@ SCENARIO.ch4 = [
  {c:'NEO',say:'あの夜、必要だったのは、そうではなかった。'},
  {ch:[
   {t:'……その子は、いまも電話をかけてきています',tag:'開示',eff:{'NEO.trust':20},set:{NEO_KNOW_MUN:1},go:'neo5'},
-  {t:'あなたのせいではありません',tag:'受容',eff:{'NEO.trust':12},go:'neo_alone'},
+  {t:'あなたのせいではありません',tag:'受容',eff:{'NEO.doubt':-15,'NEO.trust':12},go:'neo_alone'},
   {t:'何年、その任に就いているんですか',tag:'確認',eff:{'NEO.trust':8},go:'neo_alone'},
-  {t:'（黙って聞いていた）',tag:'沈黙',silent:1,eff:{'NEO.trust':8},go:'neo_alone',line:'（黙って、その沈黙ごと受け取った）'}
+  {t:'（黙って聞いていた）',tag:'沈黙',silent:1,eff:{'NEO.doubt':-12,'NEO.trust':8},go:'neo_alone',line:'（黙って、その沈黙ごと受け取った）'}
  ]},
 
  {n:'neo_alone'},
@@ -222,7 +222,7 @@ SCENARIO.ch4 = [
  {ch:[
   {t:'……今夜は、報告する相手がいますよ',tag:'受容',
    eff:{'NEO.trust':16},set:{NEO_WISH:1},go:'neo_wish'},
-  {t:'それは、寂しいことです',tag:'傾聴',eff:{'NEO.trust':10},go:'neo5'}
+  {t:'それは、寂しいことです',tag:'傾聴',eff:{'NEO.doubt':-12,'NEO.trust':10},go:'neo5'}
  ]},
 
  {n:'neo_wish'},
@@ -304,7 +304,7 @@ SCENARIO.ch4 = [
  {ch:[
   {t:'……人違いでは',tag:'確認',eff:{'NEO.trust':4},go:'neo_dejavu2'},
   {t:'いつ、どこでですか',tag:'追及',eff:{'NEO.trust':8},set:{NEO_DEJAVU:1},go:'neo_dejavu2'},
-  {t:'（何も言えなかった）',tag:'沈黙',silent:1,eff:{'NEO.trust':5},go:'neo_dejavu2',
+  {t:'（何も言えなかった）',tag:'沈黙',silent:1,eff:{'NEO.doubt':-12,'NEO.trust':5},go:'neo_dejavu2',
    line:'（あなたは、何も言えなかった）'}
  ]},
 
@@ -394,9 +394,9 @@ SCENARIO.ch4 = [
  {nar:'向こうの暦では、明日が八月十四日になる。'},
  {ch:[
   {t:'ムニ。よく聞いて。八月十四日の夜、火が出る',tag:'警告',eff:{'MUN.fear':30,'MUN.trust':5},set:{MUN_WARN:1},go:'mun_warn'},
-  {t:'ケンカの話、もっと聞かせて',tag:'傾聴',eff:{'MUN.trust':10,'MUN.stress':-6},go:'mun_fight'},
-  {t:'ケンカしても、お兄ちゃんのことは好き?',tag:'傾聴',eff:{'MUN.trust':12},go:'mun_love'},
-  {t:'（何も言えない）',tag:'沈黙',silent:1,eff:{'MUN.stress':8},go:'mun_love'}
+  {t:'ケンカの話、もっと聞かせて',tag:'傾聴',eff:{'MUN.doubt':-12,'MUN.trust':10,'MUN.stress':-6},go:'mun_fight'},
+  {t:'ケンカしても、お兄ちゃんのことは好き?',tag:'傾聴',eff:{'MUN.doubt':-12,'MUN.trust':12},go:'mun_love'},
+  {t:'（何も言えない）',tag:'沈黙',silent:1,eff:{'MUN.doubt':-12,'MUN.stress':8},go:'mun_love'}
  ]},
 
  {n:'mun_fight'},
@@ -440,7 +440,7 @@ SCENARIO.ch4 = [
  {ch:[
   {t:'……ムニ。約束して。八月十四日の夜、私の言うとおりに逃げて',tag:'約束',
    eff:{'MUN.trust':20},set:{MUN_VOW:1},go:'mun_vow'},
-  {t:'いいお兄ちゃんだね',tag:'受容',eff:{'MUN.trust':8},go:'ch4_end'}
+  {t:'いいお兄ちゃんだね',tag:'受容',eff:{'MUN.doubt':-15,'MUN.trust':8},go:'ch4_end'}
  ]},
 
  {n:'mun_vow'},
