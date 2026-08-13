@@ -30,7 +30,7 @@ let S, G;
 /* UI 側フック。engine.js が実装を差し込む。
    Node での検証時は既定の no-op のまま使う。 */
 const Hooks = {
-  par(){}, meet(){}, memo(){}, evd(){}, vm(){}, rec(){}, tlfix(){}
+  par(){}, meet(){}, memo(){}, evd(){}, vm(){}, rec(){}, tlfix(){}, toastx(){}
 };
 
 function newChar(){ return {trust:20,doubt:0,fear:0,stress:0,state:'安定',life:'生存',known:[]}; }
@@ -100,6 +100,7 @@ function applyData(nd){
   if(nd.vm){ S.vm.push({d:S.day, c:clockStr(S.clock), w:nd.vm[0], x:nd.vm[1]}); Hooks.vm(); }
   if(nd.rec){ S.recs.push({id:nd.rec.id, day:S.day, ti:nd.rec.ti, tx:nd.rec.tx, hid:nd.rec.hid, flag:nd.rec.flag,
       opened:(G.recs||[]).includes(nd.rec.id)?1:0}); Hooks.rec(); }
+  if(nd.toastx){ Hooks.toastx(); }
 }
 
 /* 時刻・日付の変更（DOM 更新は呼び出し側の責務） */
@@ -146,7 +147,7 @@ function resolveJump(nd){
 /* ---------- エンディング判定 ---------- */
 function judge(){
   const alive = k => S.chars[k].life === '生存';
-  const 现 = ['LEN','JIN','GER','HYU','NEO'].every(alive);
+  const allAlive = ['LEN','JIN','GER','HYU','NEO'].every(alive);
   const goodBase = F('KAI_EXPOSE_01') && F('GER_KNIFE_01') && F('JIN_RUSH_01') && alive('LEN');
   const trueCond = goodBase && allAlive
     && F('MUN_TEACH_01') && F('MUN_TEACH_02') && F('MUN_TEACH_03')

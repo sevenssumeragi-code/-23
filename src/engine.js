@@ -7,17 +7,21 @@ const $$ = s => [...document.querySelectorAll(s)];
 
 let script = [], labels = {}, pc = 0, running = false, typing = null, tmr = null;
 
-/* ---------- 保存 ---------- */
+/* ---------- 保存 ----------
+   window.storage（ホスト提供の非標準API）→ localStorage → メモリ の順に試す。
+   素のブラウザには window.storage が無いため、localStorage を挟まないと
+   セーブがページリロードで消える。 */
 const mem = {};
 async function saveAll(){
-  try{
-    await window.storage.set('ml:save', JSON.stringify(S));
-    await window.storage.set('ml:global', JSON.stringify(G));
-  }catch(e){ mem.save = JSON.stringify(S); mem.global = JSON.stringify(G); }
+  const s = JSON.stringify(S), g = JSON.stringify(G);
+  try{ await window.storage.set('ml:save', s); await window.storage.set('ml:global', g); return; }catch(e){}
+  try{ localStorage.setItem('ml:save', s); localStorage.setItem('ml:global', g); return; }catch(e){}
+  mem.save = s; mem.global = g;
 }
 async function loadKey(k){
-  try{ const r = await window.storage.get('ml:'+k); return r ? JSON.parse(r.value) : null; }
-  catch(e){ return mem[k] ? JSON.parse(mem[k]) : null; }
+  try{ const r = await window.storage.get('ml:'+k); if(r) return JSON.parse(r.value); }catch(e){}
+  try{ const v = localStorage.getItem('ml:'+k); if(v) return JSON.parse(v); }catch(e){}
+  return mem[k] ? JSON.parse(mem[k]) : null;
 }
 
 /* ---------- 音響(WebAudio・素材不要) ---------- */
@@ -263,6 +267,8 @@ Hooks.evd   = t => toast('証拠を入手：'+t);
 Hooks.vm    = () => { renderNav(); toast('留守番電話に1件のメッセージ'); };
 Hooks.rec   = () => { renderNav(); toast('通話を録音しました'); };
 Hooks.tlfix = () => toast('事件年表の空白が埋まった。');
+Hooks.toastx= () => { const n = ['MUN_TEACH_01','MUN_TEACH_02','MUN_TEACH_03'].filter(F).length;
+                      toast('ムニに教えたこと '+n+' / 3'); };
 
 /* ---------- 実行 ---------- */
 function loadChapter(id, startLabel){
@@ -293,7 +299,7 @@ function exec(nd){
     const el = pushLine(`<span class="nm" style="color:${m.col}">${nd.nm||m.name}</span>`, nd.w?'wsp':'');
     running = true;
     typeInto(el, nd.say, nd.slow?46:22, ()=>{ running=false; $('#next').style.display='block'; });
-    if(nd.se) AU.beep(...({}[nd.se]||[600,.06,.02,'sine']));
+    if(nd.se) AU.beep(...(SE[nd.se]||[600,.06,.02,'sine']));
     return;
   }
   if(nd.me!=null){
@@ -334,6 +340,10 @@ function exec(nd){
   if(nd.clear){ $('#text').innerHTML=''; }
   step();
 }
+/* 効果音キーの対応表(se: 用)。現状シナリオ未使用だが、参照先が無いと
+   se: を書いても常に既定音になってしまうため実体を用意しておく。 */
+const SE = {};
+
 /* 通話 */
 function startCall(c){
   S.cur = c; S.callStart = S.clock;
@@ -436,7 +446,7 @@ async function boot(){
     <div class="sub" style="margin-top:30px;font-size:11px">到達エンディング ${(G.endings||[]).length} / 5　　発見した録音 ${(G.recs||[]).length}</div>`;
   $('#mNew').onclick = ()=> startGame(G.loops>0);
   $('#mInfo').onclick = ()=> showInfo();
-  if(sv) $('#mCont').onclick = ()=>{ setState(sv); resume(); };
+  if(sv) $('#mCont').onclick = ()=>{ setState(sv); $('#title').remove(); resume(); };
   waveInit();
   document.addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter'){ if($('#choices').children.length===0) advance(); } });
   $('#textwrap').onclick = ()=>{ if($('#choices').children.length===0) advance(); };
@@ -474,7 +484,8 @@ function startGame(carry){
     if(G.tl && G.tl.length > S.tl.length) S.tl = G.tl.slice();
     SET('LOOP_02', S.loop);
   }
-  $('#title').remove();
+  const t = $('#title'); if(t) t.remove();
+  $$('.ov').forEach(o=>o.remove());   // エンディング画面から直接次の周回へ入る場合
   resume(true);
 }
 function resume(fresh){
