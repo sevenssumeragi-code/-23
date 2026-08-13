@@ -1,0 +1,2607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ミッドナイトライン ―澪原市いのちの電話―</title>
+<style>
+:root{
+  --ink:#0a0d13;
+  --ink2:#0f141d;
+  --panel:#121a25;
+  --line:#1e2a39;
+  --amber:#f0c674;
+  --amber-d:#9c7c3c;
+  --cyan:#7fb6c9;
+  --red:#c4443a;
+  --paper:#e7e3d7;
+  --dim:#8792a2;
+  --mincho:"Yu Mincho","YuMincho","Hiragino Mincho ProN","Noto Serif JP",serif;
+  --sans:"Hiragino Sans","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{
+  background:var(--ink);color:var(--paper);font-family:var(--sans);
+  overflow:hidden;letter-spacing:.02em;
+}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+
+/* ===== ノイズ / スキャンライン(境界接近度で強まる署名演出) ===== */
+#grain{position:fixed;inset:0;pointer-events:none;z-index:60;opacity:.05;mix-blend-mode:screen;
+  background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.09) 0 1px,transparent 1px 3px);
+  transition:opacity .8s}
+#vhs{position:fixed;inset:0;pointer-events:none;z-index:61;opacity:0;transition:opacity .6s;
+  background:radial-gradient(120% 90% at 50% 50%,transparent 55%,rgba(0,0,0,.85) 100%)}
+body.n1 #grain{opacity:.12} body.n2 #grain{opacity:.2} body.n3 #grain{opacity:.32}
+body.n2 #vhs{opacity:.5} body.n3 #vhs{opacity:.85}
+body.n3{animation:hue 6s infinite linear}
+@keyframes hue{50%{filter:contrast(1.06) saturate(.85)}}
+@keyframes shake{10%,90%{transform:translate(-1px,0)}20%,80%{transform:translate(2px,1px)}
+  30%,50%,70%{transform:translate(-3px,-1px)}40%,60%{transform:translate(3px,1px)}}
+body.shake #app{animation:shake .5s}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:62;transition:opacity .12s}
+
+/* ===== ヘッダ:業務端末のステータスバー ===== */
+header{display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#131b26,#0d131c);font-size:12px;color:var(--dim);flex:none}
+header .clock{font-family:var(--mincho);font-size:22px;color:var(--amber);letter-spacing:.12em;
+  text-shadow:0 0 14px rgba(240,198,116,.35)}
+header .day{letter-spacing:.18em}
+header .chap{font-family:var(--mincho);color:var(--paper);letter-spacing:.1em;font-size:13px}
+header .sp{flex:1}
+header .lamp{width:9px;height:9px;border-radius:50%;background:#2a3444;display:inline-block;margin-right:6px}
+header .lamp.on{background:var(--red);box-shadow:0 0 10px var(--red);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.iconbtn{padding:6px 9px;border:1px solid var(--line);border-radius:4px;color:var(--dim);font-size:11px}
+.iconbtn:hover{color:var(--amber);border-color:var(--amber-d)}
+
+/* ===== レイアウト ===== */
+main{flex:1;display:grid;grid-template-columns:210px 1fr 230px;min-height:0}
+nav{border-right:1px solid var(--line);background:var(--ink2);padding:10px 8px;overflow:auto}
+nav h4{font-size:10px;color:var(--dim);letter-spacing:.24em;margin:12px 6px 6px;font-weight:400}
+nav button{display:block;width:100%;text-align:left;padding:8px 10px;font-size:12.5px;color:var(--dim);
+  border-left:2px solid transparent;border-radius:0 3px 3px 0}
+nav button:hover{color:var(--paper);background:#141d29}
+nav button.act{color:var(--amber);border-left-color:var(--amber);background:#151f2c}
+nav button .badge{float:right;font-size:10px;color:var(--red)}
+
+/* 中央:通話ビュー */
+#stage{position:relative;display:flex;flex-direction:column;min-width:0;background:
+  radial-gradient(80% 60% at 50% 0%,#16202d 0%,#0a0d13 70%)}
+#caller{padding:14px 22px 6px;flex:none}
+#caller .who{font-family:var(--mincho);font-size:26px;letter-spacing:.1em}
+#caller .meta{font-size:11px;color:var(--dim);letter-spacing:.16em;margin-top:3px}
+#wave{width:100%;height:64px;display:block;flex:none;opacity:.9}
+#textwrap{flex:1;overflow:auto;padding:6px 22px 10px;min-height:0}
+.tx{font-family:var(--mincho);font-size:17px;line-height:2.05;margin:0 0 14px;max-width:62ch}
+.tx.nar{color:#b9c2cf}
+.tx.sys{font-family:var(--sans);font-size:12.5px;color:var(--cyan);letter-spacing:.14em;line-height:1.9;
+  border-left:2px solid var(--cyan);padding-left:10px}
+.tx .nm{color:var(--amber);font-size:13px;letter-spacing:.16em;display:block;margin-bottom:2px;font-family:var(--sans)}
+.tx.me .nm{color:var(--cyan)}
+.tx.me{color:#dfe6ee}
+.tx.wsp{color:#7c5c5c;font-size:15px}
+.cursor{display:inline-block;width:8px;height:16px;background:var(--amber);animation:blink .8s infinite;vertical-align:-2px}
+#choices{flex:none;padding:0 22px 18px;display:flex;flex-direction:column;gap:8px}
+.cbtn{border:1px solid var(--line);background:#101823;padding:12px 14px;border-radius:5px;text-align:left;
+  font-size:14px;line-height:1.6;position:relative;transition:.15s}
+.cbtn:hover{border-color:var(--amber-d);background:#16202d;transform:translateX(3px)}
+.cbtn:focus-visible{outline:2px solid var(--amber)}
+.cbtn .tag{font-size:10px;color:var(--dim);letter-spacing:.16em;margin-right:8px}
+.cbtn.silent{font-style:italic;color:#9fb0c0}
+.cbtn.lock{opacity:.35;cursor:not-allowed}
+.cbtn.hid{border-color:#3a2b4a;background:#150f1d}
+.cbtn.hid .tag{color:#a98ac9}
+#timer{height:3px;background:var(--red);width:100%;transform-origin:left;flex:none}
+#next{position:absolute;right:18px;bottom:14px;font-size:11px;color:var(--dim);letter-spacing:.2em;animation:blink 1.4s infinite}
+
+/* 右:パラメータ */
+aside{border-left:1px solid var(--line);background:var(--ink2);padding:12px 12px;overflow:auto}
+aside h4{font-size:10px;color:var(--dim);letter-spacing:.24em;margin:4px 0 10px;font-weight:400}
+.pc{border:1px solid var(--line);border-radius:5px;padding:9px;margin-bottom:9px;background:#101722}
+.pc .n{font-family:var(--mincho);font-size:14px;letter-spacing:.08em}
+.pc .st{float:right;font-size:10px;letter-spacing:.12em;color:var(--dim)}
+.pc .st.危機{color:var(--red)} .pc .st.混乱{color:#e08a4a} .pc .st.動揺{color:var(--amber)}
+.pc .st.死亡,.pc .st.消失{color:#6d7a8a}
+.bar{height:3px;background:#1b2534;border-radius:2px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;transition:width .5s}
+.lb{font-size:9.5px;color:var(--dim);letter-spacing:.12em;margin-top:5px}
+
+/* パネル(資料) */
+#panel{position:absolute;inset:0;background:rgba(8,11,16,.97);z-index:30;display:none;flex-direction:column}
+#panel.on{display:flex}
+#panel .ph{display:flex;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);flex:none}
+#panel .ph h3{font-family:var(--mincho);font-size:18px;letter-spacing:.16em;margin:0;flex:1;font-weight:400}
+#panel .pb{flex:1;overflow:auto;padding:16px 18px}
+.card{border:1px solid var(--line);border-left:2px solid var(--amber-d);background:#101722;border-radius:4px;
+  padding:11px 13px;margin-bottom:10px}
+.card h5{margin:0 0 5px;font-size:13.5px;font-family:var(--mincho);letter-spacing:.08em;font-weight:400}
+.card p{margin:0;font-size:12.5px;line-height:1.85;color:#b9c2cf}
+.card .d{font-size:10px;color:var(--dim);letter-spacing:.14em}
+.card.hidn{border-left-color:#7c5c9c}
+.card.evd{border-left-color:var(--cyan)}
+.tools{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.tools button{font-size:11px;border:1px solid var(--line);padding:5px 9px;border-radius:3px;color:var(--dim)}
+.tools button:hover{color:var(--amber);border-color:var(--amber-d)}
+.empty{color:var(--dim);font-size:12.5px;line-height:2;font-family:var(--mincho)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td{padding:7px 8px;border-bottom:1px solid #172131;vertical-align:top;line-height:1.7}
+td.t{color:var(--dim);white-space:nowrap;font-size:11px;letter-spacing:.1em}
+.rel{font-size:12.5px;line-height:2.1;color:#b9c2cf;font-family:var(--mincho)}
+.rel b{color:var(--amber);font-weight:400}
+.rel.dot{color:#a98ac9}
+
+/* タイトル/エンディング等のオーバーレイ */
+.ov{position:fixed;inset:0;z-index:70;background:var(--ink);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:28px;text-align:center;overflow:auto}
+.ov h1{font-family:var(--mincho);font-size:clamp(28px,7vw,54px);letter-spacing:.22em;margin:0 0 6px;font-weight:400}
+.ov h1 small{display:block;font-size:12px;letter-spacing:.5em;color:var(--amber);margin-bottom:18px}
+.ov .sub{font-family:var(--mincho);color:var(--dim);font-size:13px;letter-spacing:.3em;margin-bottom:34px}
+.ov .mbtn{display:block;min-width:250px;border:1px solid var(--line);padding:13px;margin:7px auto;border-radius:4px;
+  font-size:14px;letter-spacing:.16em;background:#101722}
+.ov .mbtn:hover{border-color:var(--amber);color:var(--amber)}
+.ov .mbtn small{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em;margin-top:4px}
+.ov p{font-family:var(--mincho);font-size:15px;line-height:2.2;max-width:56ch;color:#c6cedb}
+.ov .endname{font-family:var(--mincho);font-size:clamp(26px,6vw,42px);letter-spacing:.3em;color:var(--amber)}
+.fade{animation:fi 1.6s both}@keyframes fi{from{opacity:0}to{opacity:1}}
+.chapcard{position:fixed;inset:0;z-index:65;background:#05070a;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;animation:fi 1.2s both}
+.chapcard .no{font-size:11px;letter-spacing:.5em;color:var(--dim);margin-bottom:14px}
+.chapcard .ti{font-family:var(--mincho);font-size:clamp(24px,6vw,40px);letter-spacing:.24em}
+.chapcard .dt{margin-top:16px;font-size:11px;letter-spacing:.3em;color:var(--amber-d)}
+
+/* スチル */
+.still{border:1px solid var(--line);border-radius:5px;overflow:hidden;margin-bottom:12px}
+.still .im{height:120px;position:relative;background:#0c1119}
+.still .cap{padding:9px 12px;font-size:12px;color:#b9c2cf;line-height:1.8}
+.still .cap b{display:block;font-family:var(--mincho);font-size:14px;color:var(--paper);font-weight:400;letter-spacing:.08em}
+.still.lockd .im{filter:grayscale(1) brightness(.3)}
+.still.lockd .cap b{color:var(--dim)}
+#stillview{position:fixed;inset:0;z-index:66;background:#04060a;display:none;flex-direction:column;
+  align-items:center;justify-content:center;padding:22px}
+#stillview.on{display:flex;animation:fi 1s both}
+#stillview .im{width:min(720px,92vw);height:min(330px,42vh);border:1px solid var(--line)}
+#stillview .cp{font-family:var(--mincho);margin-top:18px;text-align:center;max-width:52ch;line-height:2;font-size:14px}
+#stillview .cp b{display:block;font-size:18px;letter-spacing:.2em;margin-bottom:8px;color:var(--amber);font-weight:400}
+
+/* モバイル */
+#mobtabs{display:none}
+@media(max-width:860px){
+  main{grid-template-columns:1fr}
+  nav,aside{position:absolute;inset:0;z-index:31;display:none;border:0}
+  nav.on,aside.on{display:block}
+  #mobtabs{display:flex;flex:none;border-top:1px solid var(--line);background:var(--ink2)}
+  #mobtabs button{flex:1;padding:11px 0;font-size:11px;color:var(--dim);letter-spacing:.1em}
+  #mobtabs button.act{color:var(--amber)}
+  #caller .who{font-size:21px}
+  .tx{font-size:16px;line-height:1.95}
+  #textwrap{padding:6px 16px 10px}
+  #choices{padding:0 16px 14px}
+  header .clock{font-size:18px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="day" id="hDay">DAY 01</span>
+    <span class="clock" id="hClock">22:00</span>
+    <span class="chap" id="hChap">序章</span>
+    <span class="sp"></span>
+    <span id="hNoise"><i class="lamp" id="hLamp"></i><span id="hNoiseTx">回線良好</span></span>
+    <button class="iconbtn" id="bSound">♪ ON</button>
+    <button class="iconbtn" id="bMenu">MENU</button>
+  </header>
+  <main>
+    <nav id="nav"></nav>
+    <section id="stage">
+      <div id="caller"><div class="who" id="cWho">みおはらライン</div><div class="meta" id="cMeta">待機中 — 着信なし</div></div>
+      <canvas id="wave" width="900" height="64"></canvas>
+      <div id="textwrap"><div id="text"></div></div>
+      <div id="choices"></div>
+      <div id="timer" style="transform:scaleX(0)"></div>
+      <div id="next" style="display:none">▼ 続ける</div>
+      <div id="panel"><div class="ph"><h3 id="pTitle"></h3><button class="iconbtn" id="pClose">閉じる</button></div><div class="pb" id="pBody"></div></div>
+    </section>
+    <aside id="aside"></aside>
+  </main>
+  <div id="mobtabs">
+    <button data-m="call" class="act">通話</button>
+    <button data-m="nav">資料</button>
+    <button data-m="aside">相談者</button>
+  </div>
+</div>
+<div id="grain"></div><div id="vhs"></div><div id="flash"></div>
+<div id="stillview"><div class="im" id="svIm"></div><div class="cp" id="svCp"></div></div>
+<div class="ov" id="title"></div>
+<script>
+/* ============================================================
+   シナリオ本文データ
+   ============================================================ */
+const STILLS = [
+ {id:'s01',t:'深夜の相談室',c:'蛍光灯がひとつだけ切れかけている。窓の外は霧。受話器は、まだ冷たい。',cond:'序章開始',
+  bg:'linear-gradient(160deg,#0d1622 0%,#1b2836 50%,#0a0d13 100%)'},
+ {id:'s02',t:'うたたねの少年',c:'受話器を持ったまま眠りかけている。頬に、コードの跡がついている。',cond:'レニィの信頼40以上',
+  bg:'linear-gradient(140deg,#12203a,#2b4a7a 60%,#0d1622)'},
+ {id:'s03',t:'三時三十三分の着信',c:'暗い画面に、着信表示だけが浮かぶ。番号の末尾が一瞬「1994」に明滅した。',cond:'第一章 ムニ初着信',
+  bg:'radial-gradient(60% 80% at 50% 50%,#3a2f14,#0a0d13 70%)'},
+ {id:'s04',t:'提灯の下の小さな影',c:'夏祭りの明かりの下、背伸びして公衆電話の受話器を握る子ども。提灯の色が、古い。',cond:'第一章終了',
+  bg:'linear-gradient(0deg,#1a0f0a,#7a3a1a 40%,#2a1810 90%)'},
+ {id:'s05',t:'破かれた尋ね人',c:'電柱のポスターに拳の影が落ちる。カナタ、十七歳、二週間前から行方不明。',cond:'第二章 失踪報道',
+  bg:'linear-gradient(120deg,#241a12,#4a3320 50%,#0f0c0a)'},
+ {id:'s06',t:'前髪の奥',c:'赤い右目。その虹彩に、ここではない場所の空が映り込んでいる。',cond:'ヒュウが右目を打ち明ける',
+  bg:'radial-gradient(50% 70% at 55% 45%,#7a1a20,#1a2a20 60%,#0a0d13)'},
+ {id:'s07',t:'追跡の夜',c:'揺れる街灯、走る呼吸、画面の端をかすめる——引きずるような、跛行の足音。',cond:'第三章 追跡イベント',
+  bg:'linear-gradient(75deg,#0a0d13,#243040 30%,#0a0d13 60%,#1a2430)'},
+ {id:'s08',t:'混線',c:'波形が画面を埋め尽くす。その奥に、剣を提げた金色のシルエットが立っている。',cond:'第四章 ネオ初通話',
+  bg:'linear-gradient(180deg,#1a1608,#6a5a18 45%,#0a0d13)'},
+ {id:'s09',t:'渡岸',c:'逆さまの空。落ちる途中で止まった雨。剣を杖にした男と、眠る少年。',cond:'ネオと協力関係',
+  bg:'linear-gradient(200deg,#101a2a,#2a3a5a 40%,#5a4a2a 80%)'},
+ {id:'s10',t:'十年前の受話器',c:'焼け落ちた礼拝堂の黒電話。壁の時計は、三時三十三分で溶けて止まっている。',cond:'逆探知に成功',
+  bg:'radial-gradient(70% 70% at 40% 60%,#5a2a10,#1a0d08 70%)'},
+ {id:'s11',t:'父の写真',c:'色褪せた家族写真。指が、父親の顔をちょうど隠している。',cond:'ゲルの正体を看破',
+  bg:'linear-gradient(150deg,#2a1a2e,#5a3a5a 55%,#140d18)'},
+ {id:'s12',t:'テープの独白',c:'回るカセット。ラベルの手書き文字——「8/14 3:33 未対応」。',cond:'室井のテープを発見',
+  bg:'linear-gradient(90deg,#1a1a18,#4a4438 50%,#0d0d0c)'},
+ {id:'s13',t:'炎の廊下',c:'煙の下を這う小さな手。その先に、物置の鍵が、光っている。',cond:'終章 ムニ脱出パート',
+  bg:'linear-gradient(20deg,#2a0a05,#c4443a 45%,#f0c674 70%,#1a0a05)'},
+ {id:'s14',t:'三本の回線',c:'三台の受話器を同時に握る手。過去と、現在と、ここではない場所が、一本に繋がる。',cond:'終章 クライマックス',
+  bg:'linear-gradient(120deg,#0a0d13,#7fb6c9 33%,#f0c674 66%,#c4443a 100%)'},
+ {id:'s15',t:'あさやけ',c:'朝焼けの相談室。窓の外の霧が、十年ぶりに晴れていく。',cond:'TRUE END',
+  bg:'linear-gradient(0deg,#f0c674,#e08a6a 30%,#7fb6c9 70%,#1a2a3a)'},
+ {id:'s16',t:'はじめまして',c:'十五歳になったムニが、現代のスマートフォンで電話をかけている。隣で兄があくびをしている。',cond:'TRUE END 最終',
+  bg:'linear-gradient(160deg,#9ec9ff,#f0e0c0 60%,#7fa8ff)'},
+ {id:'s17',t:'発信者不明',c:'渡岸の岸辺に落ちていた一台の黒電話。それを拾い上げたのは、まだ小さな——あなただった。',cond:'SECRET END',
+  bg:'radial-gradient(60% 60% at 50% 50%,#c4443a,#1a0d18 65%,#000)'},
+ {id:'s18',t:'名札の裏',c:'外された「室井」の名札。裏側に、擦れた鉛筆でこう書かれている——「次の子へ」。',cond:'周回2以上で序章',
+  bg:'linear-gradient(45deg,#1a1c18,#8a8470 50%,#0d0e0c)'}
+];
+
+const ENDINGS = {
+ BAD:{name:'不 通',text:'八月十五日の朝、澪原市は地図から消えた。<br>誰もいない相談室で、電話だけが鳴り続けている。受話器を取ると、砂嵐の底から、聞き覚えのある声がいくつも重なって聞こえる——けれど、もう誰の言葉も、言葉の形をしていない。<br><br>ツー、ツー、ツー。'},
+ NORMAL:{name:'留守番電話',text:'失踪事件は終わった。皆、生きている。<br>けれど誰も、十年前に何があったのかを知らないままだ。レニィは今日も眠そうに笑い、自分の中の空洞に気づかないふりをしている。<br><br>その夜、三時三十三分。<br>着信が一件。取っても、誰も出ない。<br>あなたは受話器を耳に当てたまま、朝まで待った。'},
+ GOOD:{name:'開 通',text:'灰堂帰一は逮捕され、剛三の冤罪は晴れた。攫われた者たちは戻り、街は少しずつ夏を取り戻していく。<br>ただ一人、十年前の八月十四日から戻れなかった子どもを除いて。<br><br>レニィは弟の墓の前で、ようやくその名前を思い出した。あなたはもう繋がらない番号に一度だけ発信し、呼び出し音を七回聞いてから、そっと受話器を置いた。<br>これは、救えたと呼ぶには少しだけ苦い夜明けだった。'},
+ TRUE:{name:'あさやけ',text:'三時三十三分、十年前と現在が一本の回線で繋がった。<br>あなたの声だけが、燃える廊下を這う小さな背中に届いた。煙の下を、教えたとおりに。物置の鍵は、教えたところに。怖くなったら、この声を思い出して。<br><br>——朝が来る。<br>霧が晴れていく相談室で、電話が鳴る。<br>知らない番号だ。けれど、あなたは受話器を取る。取らない未来は、もうどこにもない。<br><br>「はじめまして。……でも、なんだか、なつかしい声だね」'},
+ SECRET:{name:'発信者不明',text:'十年前のあの夜、灯守園から消えたのは六人ではなかった。<br>七人目の子どもは、境界の向こうで、時間の流れないまま歳を取り、記憶をなくして帰ってきた。そして今、夜勤の椅子に座っている。<br><br>ムニがはじめから懐いていた理由。ネオが感じた既視感。室井がテープの最後に残した独白——「七人目の子は、どこへ消えたんだ」。<br><br>受話器の向こうから聞こえてくるのは、録音された、あなた自身の第一声だ。<br><br>——この物語は、あなたが十年前にかけた、一本の電話から始まっていた。'}
+};
+
+/* ============================================================
+   SCENARIO
+   ============================================================ */
+const SCENARIO = {};
+
+/* ---------------- 序章 ---------------- */
+SCENARIO.pro = [
+ {chapTitle:'序章 もしもし、きこえますか'},
+ {card:['PROLOGUE','もしもし、きこえますか','DAY 1 ／ 8月1日 22:00',0]},
+ {still:'s01'},
+ {nar:'澪原市保健福祉センター、三階。夜間電話相談室「みおはらライン」。'},
+ {nar:'蛍光灯がひとつ切れかけていて、十秒に一度、部屋がわずかに暗くなる。窓の外は霧。この街は夏でも霧が出る。'},
+ {sys:'今夜からあなたはここの夜間相談員です。勤務は22:00から翌4:00。<br>現場へ行くことはできません。あなたにできるのは、聞くことだけです。'},
+ {nar:'机の上には黒い業務用電話機、録音装置、まっさらな相談メモ。壁のロッカーには前任者の名札を差す枠があるが、名前は抜き取られていて、四角い日焼けの跡だけが残っている。'},
+ {memo:['前任の相談員','名札が外されている。日焼け跡だけが残っている。誰かが、この席にいた。']},
+ {if:{loop:2}, then:'loop_open'},
+ {go:'first_ring'},
+
+ {n:'loop_open'},
+ {still:'s18'},
+ {nar:'——おかしい。この部屋を、あなたは知っている気がする。'},
+ {nar:'名札の枠を裏返すと、擦れた鉛筆の字があった。'},
+ {sys:'「次の子へ」'},
+ {set:{LOOP_NOTE:1}},
+ {ch:[
+  {t:'受話器を上げ、覚えのない番号にかけてみる',tag:'発信',hide:{loop:2},
+   set:{SEC_CALL_01:1}, go:'secret_dial', line:'……090-XXXX-1994。どうして、この番号を知っている?'},
+  {t:'気のせいだ。仕事を始めよう',tag:'保留', go:'first_ring'}
+ ]},
+
+ {n:'secret_dial'},
+ {noise:2},{ring:'broken'},
+ {nar:'呼び出し音は鳴らなかった。最初から、誰かが出ていた。'},
+ {c:'UNK',say:'……ああ。やっと、こっちからかけ直してくれたんだね。',slow:1},
+ {c:'UNK',say:'まだ思い出さなくていいよ。今夜は、ちゃんと全部の電話を取って。',slow:1},
+ {hang:'相手側が切電（無音）',hangKind:'silent'},
+ {noise:0},
+ {memo:['発信者不明の番号','090-XXXX-1994。かけた覚えのない番号。相手は、あなたを知っている。']},
+ {go:'first_ring'},
+
+ {n:'first_ring'},
+ {ring:'normal'},
+ {sys:'着信 — 22:41'},
+ {ch:[
+  {t:'受話器を取る',tag:'受電',go:'len_call'},
+  {t:'……少し、深呼吸してから取る',tag:'傾聴',eff:{'LEN.trust':5},go:'len_call',line:'（一度深呼吸してから、受話器を上げた）'}
+ ]},
+
+ {n:'len_call'},
+ {call:{who:'発信者(男性・若い)',c:'LEN',num:'080-XXXX-2213'}},
+ {c:'LEN',nm:'???',say:'……あ。もしもし? えっと、ここって、悩みとか聞いてくれるところで合ってる?'},
+ {ch:[
+  {t:'はい。みおはらラインです。どんなことでも',tag:'受容',eff:{'LEN.trust':6},go:'len1'},
+  {t:'合っています。お名前は言わなくて大丈夫ですよ',tag:'配慮',eff:{'LEN.trust':8,'LEN.stress':-3},go:'len1'},
+  {t:'……',tag:'沈黙',silent:1,eff:{'LEN.trust':2,'LEN.stress':3},go:'len1',line:'（黙って、相手の言葉を待った）'}
+ ]},
+
+ {n:'len1'},
+ {meet:'LEN',known:['男子学生らしい','声が眠そう']},
+ {c:'LEN',say:'よかったぁ。あのね、僕、レニィっていうんだけど。'},
+ {c:'LEN',say:'今日、学校で三回怒られたんだよ。授業中に寝てたから。三回だよ? 一日で。'},
+ {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
+ {nar:'ほわほわした、力の抜けた声。深刻さはまるでない——けれど、こんな時間に、こんな番号にかけてくる。'},
+ {ch:[
+  {t:'三回はすごいね。よく眠れていないの?',tag:'傾聴',eff:{'LEN.trust':8},go:'len2'},
+  {t:'夜、何時に寝ているんですか',tag:'確認',eff:{'LEN.trust':4},go:'len2'},
+  {t:'それは怒られても仕方ないのでは',tag:'指摘',eff:{'LEN.trust':-4,'LEN.stress':5},go:'len2',line:'それは、怒られても仕方ないのでは?'}
+ ]},
+
+ {n:'len2'},
+ {c:'LEN',say:'んー。寝てないわけじゃないんだよ。むしろ寝すぎなくらい。'},
+ {c:'LEN',say:'でも、なんか、寝ても寝ても眠いんだよぉ。夢の中でずっと誰かと喋ってる感じがして。'},
+ {know:['LEN','寝ても寝ても眠い。夢で誰かと喋っている感覚がある']},
+ {ch:[
+  {t:'夢の中の誰かって、どんな人?',tag:'傾聴',eff:{'LEN.trust':7},go:'len3a'},
+  {t:'疲れているのかもしれませんね',tag:'受容',eff:{'LEN.trust':3},go:'len3b'},
+  {t:'それは夢ではないかもしれない',tag:'指摘',eff:{'LEN.fear':10,'LEN.trust':-2},go:'len3b',line:'……それは、夢ではないのかもしれませんよ。'}
+ ]},
+
+ {n:'len3a'},
+ {c:'LEN',say:'それがねぇ、朝になると忘れちゃうんだ。'},
+ {c:'LEN',say:'でも、起きたとき、いつも喉がちょっと痛いの。……いっぱい喋ったあとみたいに。'},
+ {set:{LEN_DREAM_01:1}},
+ {memo:['レニィの夢','夢で誰かと喋っている。目覚めると喉が痛い。内容は覚えていない。']},
+ {go:'len4'},
+
+ {n:'len3b'},
+ {c:'LEN',say:'そうかなぁ。まあ、いいや。眠いのは前からだしね。'},
+ {go:'len4'},
+
+ {n:'len4'},
+ {nar:'——雨音。'},
+ {nar:'受話器の向こうで、屋根を叩くような雨の音がしている。'},
+ {nar:'あなたは窓を見る。霧。星も見える。澪原市に、今夜、雨は降っていない。'},
+ {noise:1},
+ {ch:[
+  {t:'そちら、雨が降っていますか?',tag:'確認',eff:{'LEN.trust':3},set:{RAIN_ASK:1},go:'len_rain'},
+  {t:'（雨音のことは黙っておく）',tag:'沈黙',silent:1,go:'len5',line:'（雨音のことは、口に出さなかった）'}
+ ]},
+
+ {n:'len_rain'},
+ {c:'LEN',say:'え? 降ってないよぉ。ずっと晴れてるけど。'},
+ {c:'LEN',say:'……あれ。ほんとだ、雨の音がする。窓、閉まってるのに。変なのぉ。'},
+ {memo:['降っていない雨','レニィの通話の背後で雨音。市内は晴天。本人の部屋の窓は閉まっている。']},
+ {rec:{id:'r01',ti:'レニィ／初回相談',tx:'「寝ても寝ても眠いんだよぉ」——のどかな通話。背後に雨音。',
+   hid:'雨音の下に、幼い子どもの鼻歌が入っている。同じ旋律を、レニィも無意識に口ずさんでいる。',flag:'EVD_SONG_01'}},
+ {noise:0},
+ {go:'len5'},
+
+ {n:'len5'},
+ {c:'LEN',say:'……ねえ。こんな話、つまんなくない? 悩みってほどでもないしさ。'},
+ {ch:[
+  {t:'つまらなくないよ。眠れない夜は、それだけで相談する理由になる',tag:'受容',eff:{'LEN.trust':12,'LEN.stress':-8},go:'len6'},
+  {t:'もっと重い相談じゃないと駄目、なんて決まりはありません',tag:'受容',eff:{'LEN.trust':10,'LEN.stress':-6},go:'len6'},
+  {t:'では、そろそろ切りましょうか',tag:'切電',eff:{'LEN.trust':-12,'LEN.stress':10},set:{CUT_LEN_PRO:1},go:'len_cut'}
+ ]},
+
+ {n:'len6'},
+ {c:'LEN',say:'……ふふ。なんか、あったかい声だね、あなた。'},
+ {c:'LEN',say:'ねえ、また電話していい? 眠れないとき。'},
+ {ch:[
+  {t:'いつでも。私はここにいます',tag:'約束',eff:{'LEN.trust':10},set:{LEN_PROMISE:1},go:'len_end'},
+  {t:'ええ。ただし、無理に起きていないでね',tag:'配慮',eff:{'LEN.trust':7},set:{LEN_PROMISE:1},go:'len_end'}
+ ]},
+
+ {n:'len_cut'},
+ {c:'LEN',say:'……あ。うん。ごめんね、へんな時間に。おやすみ。'},
+ {hang:'こちらから切電',hangKind:'cut'},
+ {nar:'切れた。事務的には、正しい判断だ。'},
+ {nar:'ただ——この電話が今夜のうちに、もう一度かかってくることはなかった。'},
+ {go:'pro_end'},
+
+ {n:'len_end'},
+ {c:'LEN',say:'うん。ありがと。……なんか、目が覚めちゃったなぁ。'},
+ {c:'LEN',say:'あ、そうだ。最後にひとつだけ言っていい?'},
+ {c:'LEN',say:'最近ね、夢の中で、誰かが僕を呼ぶんだよぉ。おにいちゃん、って。',slow:1},
+ {fx:'shake'},{noise:1},
+ {nar:'レニィは、ひとりっ子だと言っていた。'},
+ {memo:['「おにいちゃん」','レニィは夢の中で誰かに「おにいちゃん」と呼ばれている。兄弟はいないと言う。']},
+ {set:{LEN_BRO_HINT:1}},
+ {hang:'通話終了',hangKind:'normal'},
+ {noise:0},
+ {if:{tr:['LEN',45]}, then:'pro_still'},
+ {go:'pro_end'},
+
+ {n:'pro_still'},
+ {still:'s02'},
+ {go:'pro_end'},
+
+ {n:'pro_end'},
+ {clock:'03:58'},
+ {nar:'それから朝までに、着信は一件もなかった。'},
+ {nar:'静かな夜だった。この仕事は、思っていたよりずっと穏やかなのかもしれない——'},
+ {nar:'そう思ったことを、あなたは後で何度も思い出すことになる。'},
+ {vm:['留守番電話 1件（無言）','……(雑音)……(雑音)……ガチャリ。／33秒。ずっと、誰かの息づかいだけが入っている。']},
+ {sys:'序章 終了。<br>次の夜、電話は違う音で鳴ります。'},
+ {chap:'ch1'}
+];
+
+/* ---------------- 第一章 ---------------- */
+SCENARIO.ch1 = [
+ {chapTitle:'第一章 うたたね編'},
+ {card:['CHAPTER 1','うたたね編','DAY 2 ／ 8月2日',1]},
+ {day:2},
+ {nar:'二日目の夜。相談室の空気は昨日と同じで、けれど昨日より少しだけ、耳が敏感になっている。'},
+ {ring:'normal'},
+ {sys:'着信 — 23:12'},
+ {ch:[{t:'受話器を取る',tag:'受電',go:'d2_len'}]},
+
+ {n:'d2_len'},
+ {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
+ {c:'LEN',say:'こんばんはぁ。今日はね、四回怒られたよ。記録更新だね。'},
+ {ch:[
+  {t:'記録更新はすごいけど、心配です',tag:'傾聴',eff:{'LEN.trust':6},go:'d2_len2'},
+  {t:'昨日より眠いということ?',tag:'確認',eff:{'LEN.trust':5},go:'d2_len2'}
+ ]},
+
+ {n:'d2_len2'},
+ {c:'LEN',say:'うん……。あのね、変なこと言っていい?'},
+ {c:'LEN',say:'昨日、電話切ったあと、三時三十三分にぴったり目が覚めたんだ。'},
+ {c:'LEN',say:'ここ何ヶ月も、毎日そうなんだよぉ。目覚まし、かけてないのに。'},
+ {set:{LEN_333:1}},
+ {memo:['3:33','レニィは毎晩3時33分に目が覚める。目覚ましは使っていない。']},
+ {ch:[
+  {t:'その時、何か聞こえる?',tag:'傾聴',eff:{'LEN.trust':8},go:'d2_len3'},
+  {t:'偶然でしょう。体内時計です',tag:'説明',eff:{'LEN.trust':-3,'LEN.stress':4},go:'d2_len4'}
+ ]},
+
+ {n:'d2_len3'},
+ {c:'LEN',say:'……電話の音。',slow:1},
+ {c:'LEN',say:'家の電話、もう何年も繋がってないんだけどね。それでも、鳴ってる気がするんだよ。'},
+ {know:['LEN','毎晩3:33に目が覚める。繋がっていない家電話の音が聞こえる気がする']},
+ {set:{LEN_PHONE_HINT:1}},
+ {go:'d2_len4'},
+
+ {n:'d2_len4'},
+ {c:'LEN',say:'ま、いいや。眠くなってきたし、そろそろ寝るねぇ。'},
+ {c:'LEN',say:'……あなたも、あんまり無理しないでね。おやすみ。'},
+ {hang:'相手側が切電',hangKind:'normal'},
+ {par:{c:'LEN',trust:3}},
+ {clock:'03:31'},
+ {nar:'午前三時三十一分。'},
+ {nar:'相談室が、静かすぎる。冷蔵庫の唸りも、蛍光灯の音も、なぜか遠い。'},
+ {noise:1},
+ {clock:'03:33'},
+ {ring:'old'},
+ {fx:'flash'},
+ {sys:'着信 — 03:33<br>番号：0X-XXX-1994（局番が存在しません）'},
+ {still:'s03'},
+ {nar:'業務用電話機の着信音ではない。古い黒電話の、金属が震えるようなベルの音だ。'},
+ {ch:[
+  {t:'受話器を取る',tag:'受電',go:'mun_first'},
+  {t:'取らない。無言電話の可能性がある',tag:'見送り',eff:{},set:{MUN_MISS_1:1},go:'mun_miss'},
+  {t:'録音装置を回してから取る',tag:'記録',hide:{loop:2},set:{REC_READY:1},eff:{},go:'mun_first',line:'（先に録音のスイッチを入れてから、受話器を上げた）'}
+ ]},
+
+ {n:'mun_miss'},
+ {nar:'ベルは四十七回鳴って、止まった。'},
+ {nar:'留守番電話のランプが点く。再生すると——雨音。そして、幼い子どもの、鼻歌。'},
+ {vm:['3:33の着信（無言）','雨音。そのなかで、小さな子どもが歌を口ずさんでいる。ときどき、鼻をすする音。']},
+ {inc:{MUN_CUT_XX:1}},
+ {nar:'あなたは受話器を取らなかった。それは記録に残らない。誰にも責められない。'},
+ {nar:'——ただ、その夜、子どもは一人で朝を待った。'},
+ {go:'d3_start'},
+
+ {n:'mun_first'},
+ {noise:2},
+ {call:{who:'発信者(子ども)',c:'MUN',num:'0X-XXX-1994'}},
+ {c:'MUN',nm:'???',say:'……もしもし。もしもーし。'},
+ {c:'MUN',nm:'???',say:'あのね、おかけになったでんわばんごうは、ってきこえたから、いっぱいおしたの。'},
+ {meet:'MUN',known:['幼い男の子。5歳くらい','雨の音の中から電話をかけている']},
+ {ch:[
+  {t:'もしもし。こんばんは。おなまえ、教えてくれる?',tag:'受容',eff:{'MUN.trust':10},go:'mun2'},
+  {t:'こんな時間だよ。おうちの人は?',tag:'確認',eff:{'MUN.trust':4,'MUN.fear':6},go:'mun2'},
+  {t:'いたずら電話なら切りますよ',tag:'切電',eff:{'MUN.trust':-20,'MUN.fear':15},inc:{MUN_CUT_XX:1},go:'mun_cut1'}
+ ]},
+
+ {n:'mun_cut1'},
+ {c:'MUN',say:'……ごめんなさい。いたずらじゃないの。ごめんなさい。'},
+ {hang:'こちらから切電',hangKind:'cut'},
+ {nar:'切った。手が、少し震えている。'},
+ {nar:'履歴を確認する。——この着信は、履歴に残っていない。'},
+ {go:'d3_start'},
+
+ {n:'mun2'},
+ {call:{who:'ムニ(5歳)',c:'MUN',num:'0X-XXX-1994'}},
+ {c:'MUN',say:'ムニだよ。5さい。……おねえちゃん? おにいちゃん? どっち?'},
+ {ch:[
+  {t:'どっちでもいいよ。電話のひと、でいい',tag:'受容',eff:{'MUN.trust':10},go:'mun3'},
+  {t:'（名前を名乗る)',tag:'信頼',eff:{'MUN.trust':8},go:'mun3',line:'（あなたは、自分の名前を名乗った）'}
+ ]},
+
+ {n:'mun3'},
+ {set:{MUN_LINE_01:1}},
+ {c:'MUN',say:'あのね、ムニね、ねむれないの。おへやがまっくらで、ろうかがこわいの。'},
+ {c:'MUN',say:'おにいちゃんは、となりでねてるんだけど、おこしちゃだめっていわれてるから。'},
+ {nar:'背後で、雨。屋根を叩く、強い雨音。'},
+ {nar:'——昨夜、レニィの通話の背後で聞いたのと、同じ雨音だ。'},
+ {ch:[
+  {t:'そのお兄ちゃんの名前、教えてくれる?',tag:'確認',eff:{'MUN.trust':3,'MUN.fear':4},go:'mun_bro'},
+  {t:'こわいね。じゃあ、眠るまで一緒にいるよ',tag:'受容',eff:{'MUN.trust':15,'MUN.fear':-10},set:{MUN_STAY_1:1},go:'mun4'},
+  {t:'そこはどこ? 住所は分かる?',tag:'確認',eff:{'MUN.trust':2,'MUN.fear':8},go:'mun_addr'}
+ ]},
+
+ {n:'mun_bro'},
+ {c:'MUN',say:'……ないしょ。せんせいが、おなまえはいっちゃだめって。'},
+ {c:'MUN',say:'ここね、おうちじゃないの。みんなでくらしてるところ。'},
+ {know:['MUN','施設で暮らしている。職員に名前を言わないよう指導されている']},
+ {memo:['ムニの居場所','「おうちじゃない、みんなで暮らしているところ」。施設と思われる。']},
+ {go:'mun4'},
+
+ {n:'mun_addr'},
+ {c:'MUN',say:'……わかんない。でも、おそとにね、おっきいかねがあるの。ごーん、ってなるやつ。'},
+ {memo:['大きな鐘','ムニのいる場所には鐘がある。礼拝堂か、それに類する建物。']},
+ {go:'mun4'},
+
+ {n:'mun4'},
+ {c:'MUN',say:'ねえ、しってる? ここね、ずっとなつなんだよ。',slow:1},
+ {ch:[
+  {t:'ずっと夏? どういうこと?',tag:'確認',eff:{'MUN.trust':4},go:'mun5'},
+  {t:'そうだね。夏だね',tag:'受容',eff:{'MUN.trust':6},go:'mun5',line:'そうだね。ずっと夏だね。'}
+ ]},
+
+ {n:'mun5'},
+ {c:'MUN',say:'まえもね、あしたもね、あさってもね、ずっとなつなの。'},
+ {c:'MUN',say:'あしたね、おまつりなんだよ。おにいちゃんとやくそくしたの。りんごあめ、はんぶんこするの。'},
+ {memo:['夏祭りの約束','ムニは明日、兄と夏祭りに行く約束をしている。「ここはずっと夏」。']},
+ {set:{MUN_FESTIVAL:1}},
+ {noise:3},
+ {nar:'ざあ、と回線が荒れた。雨音が急に大きくなる。'},
+ {c:'MUN',say:'……あ。でんわ、きれちゃう。'},
+ {c:'MUN',say:'ねえ、また、おはなししてくれる?'},
+ {sec:9},
+ {ch:[
+  {t:'するよ。約束する。必ずまた出るから',tag:'約束',eff:{'MUN.trust':20,'MUN.fear':-15},set:{MUN_PROMISE:1},go:'mun_end'},
+  {t:'……気をつけて。何かあったら、すぐかけて',tag:'配慮',eff:{'MUN.trust':10},go:'mun_end'},
+  {t:'（言葉に迷っているうちに）',tag:'沈黙',silent:1,timeout:1,eff:{'MUN.trust':-5,'MUN.fear':10},go:'mun_end'}
+ ]},
+
+ {n:'mun_end'},
+ {hang:'回線断（ノイズ）',hangKind:'silent'},
+ {noise:1},
+ {rec:{id:'r02',ti:'ムニ／3:33の通話',tx:'「ここね、ずっとなつなんだよ」——強い雨音。子どもの声。',
+   hid:'雨音を除去すると、遠くで祭囃子。そして大人の男の声——「まだ、その子は起きているのか」。引きずるような足音。',flag:'EVD_KAI_STEP'}},
+ {nar:'通話履歴を開く。'},
+ {sys:'通話履歴 — 該当なし。<br>03:33 の記録は、どこにも残っていません。'},
+ {noise:0},
+ {go:'d3_start'},
+
+ {n:'d3_start'},
+ {day:3},
+ {card:['DAY 3','無言の夜','8月3日',1]},
+ {nar:'三日目。着信は多かった。眠れない、金がない、隣人がうるさい——街のありふれた夜。'},
+ {nar:'そのうち四件が、無言だった。'},
+ {sys:'無言着信 4件。すべて通話時間 0秒。<br>切断は、いずれも相手側。'},
+ {vm:['留守番電話 3件','1件目：息づかいと、遠い車の音。／2件目：「……もし、」で切れる。／3件目：無音。ただし最後に、金属がこすれるような音。']},
+ {ch:[
+  {t:'無言着信を録音として保存し、波形を比べてみる',tag:'記録',eff:{},set:{WAVE_TRY:1},go:'d3_wave'},
+  {t:'いたずらだろう。記録だけ残す',tag:'保留',go:'d3_len'}
+ ]},
+
+ {n:'d3_wave'},
+ {rec:{id:'r03',ti:'無言着信／4件分',tx:'いずれも通話時間0秒。息づかい。金属のこすれる音。',
+   hid:'4件とも、背後に同じ低周波の唸りが入っている。14ヘルツ前後。人間の耳では「不安」としか感じられない音。',flag:'EVD_HZ_01'}},
+ {memo:['無言着信','4件。すべて通話時間0秒。相手側から切断。同じ雑音が入っている。']},
+ {go:'d3_len'},
+
+ {n:'d3_len'},
+ {clock:'01:20'},
+ {ring:'normal'},
+ {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
+ {c:'LEN',say:'……ねえ。今日はちょっとだけ、まじめな話していい?'},
+ {c:'LEN',say:'僕、小さい頃の記憶がぜんぜんないんだよ。七歳より前が、まるごと。'},
+ {ch:[
+  {t:'それは、いつから気づいていたの?',tag:'傾聴',eff:{'LEN.trust':8},go:'d3_len2'},
+  {t:'思い出そうとすると、どうなる?',tag:'確認',eff:{'LEN.trust':6,'LEN.fear':8},go:'d3_len2'},
+  {t:'誰にでもあることです',tag:'説明',eff:{'LEN.trust':-6,'LEN.stress':8},go:'d3_len3'}
+ ]},
+
+ {n:'d3_len2'},
+ {c:'LEN',say:'思い出そうとするとね、焦げたにおいがするんだ。'},
+ {c:'LEN',say:'……あと、左手が熱くなる。ここ、やけどの跡があってさ。いつのか、覚えてないんだけど。'},
+ {know:['LEN','7歳以前の記憶がない','左手首に火傷の跡がある','思い出そうとすると焦げた匂いを感じる']},
+ {memo:['レニィの空白','7歳以前の記憶がない。左手首に火傷跡。想起時に焦げた匂い。']},
+ {rel:['レニィ','—— 火事の記憶?','灯守園の火災',1]},
+ {set:{LEN_BURN:1}},
+ {go:'d3_len3'},
+
+ {n:'d3_len3'},
+ {c:'LEN',say:'……なんてね。眠いだけかも。忘れて忘れて。'},
+ {ch:[
+  {t:'忘れないよ。あなたが話したことは、ちゃんと預かる',tag:'受容',eff:{'LEN.trust':14,'LEN.stress':-10},set:{LEN_KEEP:1},go:'d3_end'},
+  {t:'わかりました。忘れます',tag:'受容',eff:{'LEN.trust':-4},go:'d3_end',line:'わかりました。忘れておきます。'}
+ ]},
+
+ {n:'d3_end'},
+ {c:'LEN',say:'……ふふ。ありがと。'},
+ {hang:'通話終了',hangKind:'normal'},
+ {day:4},
+ {card:['DAY 4','夏祭りの夜','8月4日',1]},
+ {nar:'四日目。市内では商店街の夏祭り。窓を開けると、遠くで囃子が鳴っている。'},
+ {clock:'03:33'},
+ {ring:'old'},
+ {sys:'着信 — 03:33<br>番号：0X-XXX-1994'},
+ {ch:[
+  {t:'受話器を取る',tag:'受電',go:'mun_d4'},
+  {t:'今夜は取らない',tag:'見送り',inc:{MUN_CUT_XX:1},go:'mun_d4_miss'}
+ ]},
+
+ {n:'mun_d4_miss'},
+ {vm:['3:33の着信（無言）','「……りんごあめ、はんぶんこ」。それだけ。あとは雨音。']},
+ {nar:'ベルは、昨夜より短く止んだ。'},
+ {go:'ch1_end'},
+
+ {n:'mun_d4'},
+ {noise:2},
+ {call:{who:'ムニ(5歳)',c:'MUN',num:'0X-XXX-1994'}},
+ {c:'MUN',say:'でんわのひと! ねえ、きいて。おまつり、いったよ!'},
+ {c:'MUN',say:'りんごあめ、はんぶんこしたの。おにいちゃん、はんぶんよりおおくくれたんだよ。'},
+ {nar:'背後で、祭囃子。'},
+ {nar:'——あなたの窓の外でも、祭囃子が鳴っている。同じ曲だ。'},
+ {nar:'ただし、ムニの側の囃子には、いま商店街で使われていない古い節が混ざっている。'},
+ {ch:[
+  {t:'よかったね。お兄ちゃん、優しいんだね',tag:'受容',eff:{'MUN.trust':12},go:'mun_d4b'},
+  {t:'ムニ。今日は、何年の何月何日か分かる?',tag:'確認',eff:{'MUN.trust':2},set:{MUN_DATE_ASK:1},go:'mun_date'}
+ ]},
+
+ {n:'mun_date'},
+ {c:'MUN',say:'えっとねぇ……はちがつ、じゅうさんにち!'},
+ {c:'MUN',say:'ねんは、わかんない。せんせいのカレンダーに、おっきくかいてあるけど、まだよめないの。'},
+ {nar:'八月十三日。あなたのカレンダーは、八月四日を指している。'},
+ {memo:['日付の食い違い','ムニは今日を「8月13日」と言う。こちらは8月4日。ムニの側の暦は、こちらとずれている。']},
+ {set:{MUN_DATE_GAP:1}},
+ {go:'mun_d4b'},
+
+ {n:'mun_d4b'},
+ {c:'MUN',say:'あのねぇ、ムニ、こわいゆめみるの。'},
+ {c:'MUN',say:'おうちがまっかになって、けむりがいっぱいで、あついの。'},
+ {noise:3},
+ {fx:'shake'},
+ {nar:'背筋に、氷を落とされたような感覚。'},
+ {ch:[
+  {t:'ムニ。もし本当に煙が出たら、体を低くして、床を這って逃げるんだよ',tag:'教える',
+   eff:{'MUN.trust':10,'MUN.fear':-5},set:{MUN_TEACH_01:1},go:'mun_teach1',
+   line:'ムニ、よく聞いて。もし本当に煙が出たら——体を低くして、床を這って逃げるんだよ。'},
+  {t:'大丈夫、夢だよ。こわくないよ',tag:'受容',eff:{'MUN.trust':8,'MUN.fear':-8},go:'mun_d4c'},
+  {t:'その夢、いつから見ているの?',tag:'確認',eff:{'MUN.trust':4},go:'mun_d4c'}
+ ]},
+
+ {n:'mun_teach1'},
+ {c:'MUN',say:'……ひくく。はって、にげる。'},
+ {c:'MUN',say:'うん。おぼえた。ムニ、おぼえるのとくいだよ。'},
+ {memo:['ムニに教えたこと①','煙が出たら体を低くして這って逃げる。ムニは覚えたと言った。']},
+ {toastx:1},
+ {go:'mun_d4c'},
+
+ {n:'mun_d4c'},
+ {c:'MUN',say:'……ねむくなってきちゃった。'},
+ {c:'MUN',say:'でんわのひとのこえ、まくらもとにおいてねたいなぁ。',slow:1},
+ {ch:[
+  {t:'眠るまで、ここにいるよ。切らないから',tag:'受容',eff:{'MUN.trust':18,'MUN.fear':-12,'MUN.stress':-10},set:{MUN_STAY_2:1},go:'mun_sleep'},
+  {t:'おやすみ。また明日',tag:'配慮',eff:{'MUN.trust':6},go:'mun_sleep2'}
+ ]},
+
+ {n:'mun_sleep'},
+ {nar:'あなたは何も喋らなかった。ただ、受話器を耳に当てたまま、呼吸の音だけを聞いていた。'},
+ {nar:'雨。かすかな寝息。三十分。'},
+ {clock:'04:03'},
+ {nar:'勤務時間は、とっくに過ぎている。'},
+ {still:'s04'},
+ {go:'ch1_end'},
+
+ {n:'mun_sleep2'},
+ {c:'MUN',say:'うん。おやすみなさい。'},
+ {hang:'通話終了',hangKind:'normal'},
+ {go:'ch1_end'},
+
+ {n:'ch1_end'},
+ {noise:0},
+ {clock:'04:20'},
+ {nar:'退勤前、あなたは資料棚の古い名簿を何気なくめくった。'},
+ {nar:'市内の児童福祉施設一覧。そのうちの一つに、赤い線が引かれている。'},
+ {sys:'児童養護施設「灯守園」<br>——十年前の火災により閉園。'},
+ {tl:['本日','市内の夏祭り。ムニの側では「8月13日」の祭。']},
+ {memo:['灯守園','十年前の火災で閉園した児童養護施設。名簿に赤線。']},
+ {rel:['ムニ','—— 兄弟?','レニィ',1]},
+ {sys:'第一章 終了。<br><br>残された疑問：<br>・ムニはどこから電話をかけているのか<br>・なぜレニィと同じ雨音、同じ鼻歌なのか<br>・「ずっと夏」の意味'},
+ {vm:['留守番電話 1件','若い男の声。「……あの、人が消えるって、警察に言っても信じてもらえないんすけど。ここ、そういうのも聞いてくれますか」']},
+ {chap:'ch2'}
+];
+
+/* ---------------- 第二章 ---------------- */
+SCENARIO.ch2 = [
+ {chapTitle:'第二章 ともしび編'},
+ {card:['CHAPTER 2','ともしび編','DAY 5 ／ 8月5日',2]},
+ {day:5},
+ {nar:'五日目。昼のニュースで、市内の若者の行方不明が三件目になったと報じられた。'},
+ {sys:'澪原ケーブルテレビ ニュース<br>「市内で若者の失踪が相次いでいます。警察はいずれも家出の可能性が高いとして……」'},
+ {ring:'normal'},
+ {sys:'着信 — 22:35'},
+ {ch:[{t:'受話器を取る',tag:'受電',go:'jin1'}]},
+
+ {n:'jin1'},
+ {call:{who:'発信者(男性・若い)',c:'JIN',num:'090-XXXX-4408'}},
+ {c:'JIN',nm:'???',say:'……おい。あんた、昨日の留守電の相手か。'},
+ {c:'JIN',nm:'???',say:'俺はジンパチだ。名乗るのは礼儀だからな。で、単刀直入に言う。'},
+ {c:'JIN',nm:'???',say:'俺の親友が消えた。カナタっていう。二週間前からだ。'},
+ {meet:'JIN',known:['男性・若い','親友カナタが2週間前から行方不明']},
+ {call:{who:'ジンパチ',c:'JIN',num:'090-XXXX-4408'}},
+ {ch:[
+  {t:'警察には届けましたか',tag:'確認',eff:{'JIN.trust':5},go:'jin2'},
+  {t:'……つらいですね。まず、あなたの話を聞かせてください',tag:'傾聴',eff:{'JIN.trust':10,'JIN.stress':-5},go:'jin2'},
+  {t:'ここは事件を扱う窓口ではありません',tag:'説明',eff:{'JIN.trust':-12,'JIN.stress':12},go:'jin_angry'}
+ ]},
+
+ {n:'jin_angry'},
+ {c:'JIN',say:'……はっ。そうかよ。じゃあ何なら扱えるんだ、あんたら。'},
+ {c:'JIN',say:'悪かったな、時間取らせて。'},
+ {hang:'相手側が切電',hangKind:'cut'},
+ {nar:'切れた。乱暴な切り方だったが、怒りの奥に何かが震えていた。'},
+ {nar:'——十分後、同じ番号から着信。'},
+ {ring:'normal'},
+ {call:{who:'ジンパチ',c:'JIN',num:'090-XXXX-4408'}},
+ {c:'JIN',say:'……悪い。さっきのは俺が悪かった。'},
+ {c:'JIN',say:'他に、かける場所がねえんだよ。'},
+ {par:{c:'JIN',trust:8,stress:5}},
+ {go:'jin2'},
+
+ {n:'jin2'},
+ {c:'JIN',say:'警察は家出だってよ。カナタは高校中退してて、家族とも折り合い悪かったからな。'},
+ {c:'JIN',say:'でも、あいつが黙って消えるわけねえんだ。俺には言うはずだ。絶対に。'},
+ {ch:[
+  {t:'消える前、変わった様子はありましたか',tag:'確認',eff:{'JIN.trust':6},go:'jin3'},
+  {t:'あなたは、カナタさんに何かしてあげられなかったと思っている?',tag:'傾聴',eff:{'JIN.trust':4,'JIN.stress':10},go:'jin_guilt'},
+  {t:'心配なんですね',tag:'受容',eff:{'JIN.trust':2},go:'jin_lie'}
+ ]},
+
+ {n:'jin3'},
+ {c:'JIN',say:'変わった様子……あー、そういや、消える一週間くらい前からか。'},
+ {c:'JIN',say:'「耳鳴りがする」って言ってた。あと「病院で昔のことを聞かれた」とかな。'},
+ {c:'JIN',say:'あいつ、施設育ちなんだよ。灯守園ってとこの。潰れたけどな。'},
+ {memo:['カナタの異変','失踪1週間前から耳鳴り。病院で昔のことを聞かれた。灯守園の出身。']},
+ {rel:['カナタ','—— 出身','灯守園']},
+ {set:{JIN_CANATA_INFO:1}},
+ {go:'jin_lie'},
+
+ {n:'jin_lie'},
+ {c:'JIN',say:'は? 心配? ちげえよ。'},
+ {c:'JIN',say:'俺は心配なんかしてねえ。ムカついてんだよ、勝手に消えやがってよ。'},
+ {nar:'声が、わずかに高い。息が浅い。強がるとき、人の声は本当のことより少し速くなる。'},
+ {ch:[
+  {t:'……そうですか。ムカついているんですね',tag:'受容',eff:{'JIN.trust':3},go:'jin3'},
+  {t:'ジンパチさん。いま、少し早口になりました',tag:'指摘',eff:{'JIN.trust':6,'JIN.doubt':5,'JIN.stress':8},set:{JIN_LIE_01:1},go:'jin_guilt'},
+  {t:'怒っている人の声は、もっと低くなります',tag:'指摘',eff:{'JIN.trust':8,'JIN.stress':6},set:{JIN_LIE_01:1},go:'jin_guilt'}
+ ]},
+
+ {n:'jin_guilt'},
+ {nar:'長い沈黙。受話器の向こうで、何かを飲み込む音。'},
+ {c:'JIN',say:'……消えた前の日の夜な。'},
+ {c:'JIN',say:'あいつから着信があったんだ。二十三時四十分。俺、ゲームしてて。'},
+ {c:'JIN',say:'明日でいいやって、思って。出なかった。'},
+ {set:{JIN_CALL_MISS:1}},
+ {know:['JIN','失踪前夜、カナタの着信に出なかった','その罪悪感を怒りに変えている']},
+ {memo:['ジンパチの後悔','失踪前夜23:40のカナタからの着信に出なかった。「明日でいいや」と思った。']},
+ {ch:[
+  {t:'……その電話のこと、誰かに話したのは初めてですか',tag:'傾聴',eff:{'JIN.trust':14,'JIN.stress':-12},go:'jin4'},
+  {t:'あなたのせいではありません',tag:'受容',eff:{'JIN.trust':4,'JIN.stress':-3},go:'jin4'},
+  {t:'出ていれば、何か変わったかもしれませんね',tag:'指摘',eff:{'JIN.trust':-15,'JIN.stress':20,'JIN.fear':10},go:'jin4'}
+ ]},
+
+ {n:'jin4'},
+ {c:'JIN',say:'……ああ。初めてだ。'},
+ {c:'JIN',say:'俺、毎晩あいつの番号にかけてんだよ。呼び出し音一回で切っちまうけど。'},
+ {c:'JIN',say:'出られたら、何て言えばいいか分かんねえからな。'},
+ {ch:[
+  {t:'「わりい、電話出れなくて」。それで十分です',tag:'受容',eff:{'JIN.trust':12,'JIN.stress':-10},set:{JIN_WORDS:1},go:'jin5'},
+  {t:'その一回の呼び出し音は、ちゃんと届いていますよ',tag:'受容',eff:{'JIN.trust':10},go:'jin5'}
+ ]},
+
+ {n:'jin5'},
+ {c:'JIN',say:'……くそ。なんで電話の相手に泣かされてんだ、俺は。'},
+ {c:'JIN',say:'あー、それでな。実は、あんたに聞いてほしいもんがある。'},
+ {c:'JIN',say:'カナタの部屋から持ってきた。あいつ、音楽やっててな。レコーダーが置きっぱなしだった。'},
+ {ch:[
+  {t:'それは警察に渡すべきものです',tag:'指摘',eff:{'JIN.trust':-6},go:'jin_tape2'},
+  {t:'聞かせてください。電話越しでも構いません',tag:'受容',eff:{'JIN.trust':8},set:{JIN_TAPE:1},go:'jin_tape'}
+ ]},
+
+ {n:'jin_tape2'},
+ {c:'JIN',say:'渡したさ。「音楽の練習でしょう」で終わりだよ。だからあんたに聞いてほしいんだ。'},
+ {set:{JIN_TAPE:1}},
+ {go:'jin_tape'},
+
+ {n:'jin_tape'},
+ {noise:2},
+ {nar:'受話器越しに、レコーダーの再生音。ギターのチューニング。カナタの鼻歌。'},
+ {nar:'そして、六分十二秒のあたりで——低い唸りが入る。'},
+ {c:'CAN',nm:'カナタ(録音)',say:'……なあ、なんか聞こえない? 変な音。耳じゃなくて、腹に響くみたいな。',slow:1},
+ {c:'CAN',nm:'カナタ(録音)',say:'……先生? なんでここに——',slow:1},
+ {fx:'shake'},
+ {nar:'そこで録音は切れている。'},
+ {rec:{id:'r04',ti:'カナタのレコーダー',tx:'ギターの音。低い唸り。「先生? なんでここに——」で途切れる。',
+   hid:'唸りの正体は14ヘルツ前後の低周波。足音は左右非対称——片足を引きずっている。',flag:'EVD_KAI_STEP2'}},
+ {evd:['カナタの録音','失踪直前の録音。低周波の唸りと、「先生」と呼ばれた誰かの存在。']},
+ {memo:['「先生」','カナタは消える直前、誰かを「先生」と呼んだ。']},
+ {noise:1},
+ {go:'jin_end'},
+
+ {n:'jin_end'},
+ {c:'JIN',say:'な? おかしいだろ。あいつ、学校とっくに辞めてんだぞ。先生なんかいねえよ。'},
+ {ch:[
+  {t:'調べてみます。あなたは一人で動かないでください',tag:'約束',eff:{'JIN.trust':10},set:{JIN_WAIT_1:1},go:'jin_fin'},
+  {t:'カナタさんの交友関係を教えてください',tag:'確認',eff:{'JIN.trust':6},go:'jin_fin'},
+  {t:'あなたが自分で探しに行くべきです',tag:'指摘',eff:{'JIN.trust':4,'JIN.fear':-10},set:{JIN_HOT:1},go:'jin_fin'}
+ ]},
+
+ {n:'jin_fin'},
+ {c:'JIN',say:'……おう。わかった。あんた、案外いい奴だな。'},
+ {hang:'通話終了',hangKind:'normal'},
+ {still:'s05'},
+ {rel:['ジンパチ','—— 親友','カナタ']},
+ {rel:['カナタ','—— 失踪直前に接触','「先生」',1]},
+ {noise:0},
+
+ {day:6},
+ {card:['DAY 6','探りの声','8月6日',2]},
+ {clock:'23:50'},
+ {ring:'normal'},
+ {sys:'着信 — 23:50<br>番号：非通知'},
+ {ch:[{t:'受話器を取る',tag:'受電',go:'ger1'}]},
+
+ {n:'ger1'},
+ {call:{who:'発信者(女性)',c:'GER',num:'非通知'}},
+ {c:'GER',nm:'???',say:'夜分にすまない。少し、聞きたいことがあってな。'},
+ {c:'GER',nm:'???',say:'この相談窓口は、十年前も同じ場所にあったのか?'},
+ {meet:'GER',known:['女性。落ち着いた話し方','十年前の相談記録を探っている']},
+ {nar:'相談ではない。明らかに、調べに来ている。'},
+ {ch:[
+  {t:'ええ、同じ場所です。どうしてそれを?',tag:'確認',eff:{'GER.trust':5,'GER.doubt':5},go:'ger2'},
+  {t:'お名前を伺ってもいいですか',tag:'確認',eff:{'GER.trust':2,'GER.doubt':10},go:'ger_name'},
+  {t:'ここは相談窓口です。取材でしたらお断りします',tag:'指摘',eff:{'GER.trust':-8,'GER.doubt':15},go:'ger2'}
+ ]},
+
+ {n:'ger_name'},
+ {c:'GER',say:'……ゲルだ。フリーの記者をしている。個人的な感情はない、仕事だ。'},
+ {nar:'「個人的な感情はない」——訊いてもいないのに、そう言った。'},
+ {memo:['ゲル','自称フリー記者。訊いていないのに「個人的な感情はない」と言った。']},
+ {set:{GER_LIE_01:1}},
+ {go:'ger2'},
+
+ {n:'ger2'},
+ {c:'GER',say:'十年前の八月十四日。灯守園という施設で火事があった。知っているか。'},
+ {c:'GER',say:'その夜、この窓口に、園の子どもから電話がかかっていたはずなんだ。'},
+ {noise:1},
+ {ch:[
+  {t:'……なぜ、そう思うんですか',tag:'確認',eff:{'GER.trust':6},go:'ger3'},
+  {t:'記録は残っていないと思います',tag:'説明',eff:{'GER.trust':3},go:'ger3'},
+  {t:'その電話を、私は今も受けています',tag:'開示',eff:{'GER.trust':12,'GER.doubt':20},set:{GER_TOLD_MUN:1},go:'ger3'}
+ ]},
+
+ {n:'ger3'},
+ {c:'GER',say:'……当時の当直職員が、そう証言していた。「子どもが電話をかけに行った」と。'},
+ {c:'GER',say:'その職員は、放火犯として起訴された。獄中で死んだ。誰も証言を信じなかったんだ。'},
+ {tl:['10年前 8/14','火災当夜、園児が「みおはらライン」へ電話をかけたという当直職員の証言。信用されず。']},
+ {memo:['当直職員の証言','火災当夜、園児が電話をかけたと証言。放火犯として起訴、獄中死。']},
+ {rel:['灯守園の火災','—— 放火犯とされた','当直職員']},
+ {ch:[
+  {t:'あなたは、その職員が無実だと思っているんですね',tag:'傾聴',eff:{'GER.trust':10,'GER.stress':8},go:'ger4'},
+  {t:'ずいぶん詳しいですね。記者にしては',tag:'指摘',eff:{'GER.trust':-5,'GER.doubt':15},set:{GER_PRESSED:1},go:'ger4'},
+  {t:'……',tag:'沈黙',silent:1,eff:{'GER.trust':6,'GER.stress':10},go:'ger4',line:'（何も言わずに、続きを待った）'}
+ ]},
+
+ {n:'ger4'},
+ {nar:'受話器の向こうで、息を吸う音。それから、少し低くなった声。'},
+ {c:'GER',say:'……私は、事実が知りたいだけだ。それ以上でも以下でもない。'},
+ {c:'GER',say:'もう一つだけ聞かせろ。最近の失踪者のことだ。'},
+ {c:'GER',say:'消えた者たちには、共通点がある。全員、灯守園にいたか、園の関係者の子どもだ。'},
+ {fx:'flash'},
+ {evd:['失踪者の共通点','失踪者は全員、灯守園の元園児または関係者の子ども。']},
+ {rel:['失踪者たち','—— 全員が関係','灯守園']},
+ {set:{GER_INFO_1:1}},
+ {ch:[
+  {t:'その情報、どこで手に入れたんですか',tag:'確認',eff:{'GER.doubt':10},go:'ger5'},
+  {t:'……ありがとう。こちらも、掴んだことは共有します',tag:'協力',eff:{'GER.trust':12},set:{GER_ALLY:1},go:'ger5'}
+ ]},
+
+ {n:'ger5'},
+ {c:'GER',say:'ふん。まあいい。また連絡する。'},
+ {c:'GER',say:'……一つだけ。夜中に子どもの声を聞いても、切るな。'},
+ {c:'GER',say:'あの夜、それをやった相談員が一人いる。そいつは、ずっと後悔したまま消えた。'},
+ {fx:'shake'},{noise:2},
+ {hang:'相手側が切電',hangKind:'cut'},
+ {memo:['前任者の後悔','十年前、子どもの電話を切った相談員がいた。その人物は「消えた」。']},
+ {rel:['前任相談員','—— 十年前に切電','ムニ?',1]},
+ {noise:0},
+
+ {clock:'02:10'},
+ {nar:'あなたは録音装置の前に座り、これまでの録音を並べた。'},
+ {sys:'録音を「0.5倍速」で聴くと、通常の再生では聞こえない音が浮かび上がることがあります。<br>【録音再生】パネルから試せます。'},
+ {ch:[
+  {t:'ムニの通話と、カナタの録音の波形を照合する',tag:'照合',req:{and:[{f:'EVD_HZ_01'},{f:'EVD_KAI_STEP2'}]},
+   set:{EVD_WAVE_01:1},go:'wave_hit'},
+  {t:'（照合できる材料が足りない）',tag:'保留',go:'ch2_end'}
+ ]},
+
+ {n:'wave_hit'},
+ {noise:3},{fx:'shake'},
+ {nar:'二つの波形が、画面の上でぴたりと重なった。'},
+ {sys:'低周波成分 14.2Hz — 一致率 98.7%<br>ムニの通話（10年前?）と、カナタ失踪直前の録音。<br>同じ「音」が、両方の現場で鳴っている。'},
+ {evd:['波形の一致','ムニの通話とカナタの録音に同一の14.2Hz低周波。十年前と現在が、同じ現象で繋がっている。']},
+ {tl:['現在','失踪現場と「十年前」の通話に、同一の低周波（14.2Hz）を確認。']},
+ {noise:1},
+ {go:'ch2_end'},
+
+ {n:'ch2_end'},
+ {noise:0},
+ {sys:'第二章 終了。<br><br>残された疑問：<br>・失踪と十年前の火災は、どう繋がっているのか<br>・「先生」とは誰か<br>・ゲルは、本当は何者か'},
+ {vm:['留守番電話 1件','丁寧な男性の声。「……夜分に失礼します。もし、頭がおかしいと思わずに聞いてくださる方がいるなら——私の右目の話を、してもよろしいでしょうか」']},
+ {chap:'ch3'}
+];
+
+/* ---------------- 第三章 ---------------- */
+SCENARIO.ch3 = [
+ {chapTitle:'第三章 かがみめ編'},
+ {card:['CHAPTER 3','かがみめ編','DAY 7 ／ 8月7日',3]},
+ {day:7},
+ {nar:'七日目。失踪者は五人になった。'},
+ {ring:'normal'},
+ {sys:'着信 — 22:20'},
+ {ch:[{t:'受話器を取る',tag:'受電',go:'hyu1'}]},
+
+ {n:'hyu1'},
+ {call:{who:'発信者(男性・丁寧)',c:'HYU',num:'080-XXXX-6621'}},
+ {c:'HYU',nm:'???',say:'夜分に失礼いたします。昨夜、留守番電話にメッセージを残した者です。'},
+ {c:'HYU',nm:'???',say:'ヒュウと申します。……ええ、レニィの友人です。あれから、あなたのことを聞きまして。'},
+ {meet:'HYU',known:['男性。丁寧な敬語','レニィの友人']},
+ {call:{who:'ヒュウ',c:'HYU',num:'080-XXXX-6621'}},
+ {rel:['ヒュウ','—— 友人','レニィ']},
+ {ch:[
+  {t:'こんばんは。どうぞ、ゆっくり話してください',tag:'受容',eff:{'HYU.trust':8},go:'hyu2'},
+  {t:'右目の話、とありましたね',tag:'確認',eff:{'HYU.trust':5,'HYU.fear':8},go:'hyu2'}
+ ]},
+
+ {n:'hyu2'},
+ {c:'HYU',say:'ふふ。単刀直入ですね。……いえ、結構です。そのほうが助かる。'},
+ {c:'HYU',say:'先に申し上げておきますが、私はごく正常です。学業も優秀ですし、顔も悪くない。'},
+ {c:'HYU',say:'ですから、これから話すことも、正常な人間の話として聞いていただきたいのです。'},
+ {nar:'饒舌。滑らかすぎる。——防具のような話し方だ。'},
+ {ch:[
+  {t:'わかりました。正常な人の話として聞きます',tag:'受容',eff:{'HYU.trust':12,'HYU.stress':-8},go:'hyu3'},
+  {t:'笑ったりしません。約束します',tag:'約束',eff:{'HYU.trust':14,'HYU.fear':-10},set:{HYU_PROMISE:1},go:'hyu3'},
+  {t:'まず、症状を教えてください',tag:'確認',eff:{'HYU.trust':-4,'HYU.stress':10},go:'hyu3',line:'まず、症状を教えてください。'}
+ ]},
+
+ {n:'hyu3'},
+ {c:'HYU',say:'……私の右目は、前髪で隠しています。色が違うのです。赤い。'},
+ {c:'HYU',say:'そしてこの目には——ここではない場所が、映るのです。'},
+ {noise:1},
+ {c:'HYU',say:'たとえば今、私の右目には、この街の上に別の空が重なって見えています。逆さの空です。'},
+ {ch:[
+  {t:'それは、いつから見えるんですか',tag:'傾聴',eff:{'HYU.trust':8},go:'hyu4'},
+  {t:'……こわい話ですね。話してくれてありがとう',tag:'受容',eff:{'HYU.trust':14,'HYU.fear':-8},go:'hyu4'},
+  {t:'眼科か、心療内科の受診をおすすめします',tag:'説明',eff:{'HYU.trust':-18,'HYU.stress':20,'HYU.fear':10},set:{HYU_HURT:1},go:'hyu_hurt'}
+ ]},
+
+ {n:'hyu_hurt'},
+ {c:'HYU',say:'……ええ。ええ、そうですね。ごもっともです。'},
+ {c:'HYU',say:'失礼しました。忘れてください。私は、ただの美しい学生ですので。'},
+ {hang:'相手側が切電',hangKind:'cut'},
+ {nar:'切れた。丁寧な声のまま、丁寧に、閉じられた。'},
+ {nar:'——三十分後、ためらうように、もう一度かかってきた。'},
+ {ring:'normal'},
+ {call:{who:'ヒュウ',c:'HYU',num:'080-XXXX-6621'}},
+ {c:'HYU',say:'……あの。もう一度だけ、いいですか。'},
+ {c:'HYU',say:'笑わない人は、あなたが初めてだったので。……本当は、少しだけ、期待しているのです。'},
+ {par:{c:'HYU',trust:10,stress:-5}},
+ {go:'hyu4'},
+
+ {n:'hyu4'},
+ {c:'HYU',say:'いつからか、ですか。……幼い頃です。'},
+ {c:'HYU',say:'白い部屋で、青い夢を見せられました。何度も、何度も。'},
+ {c:'HYU',say:'目が覚めるたびに、先生が言うのです。「まだ足りないな」と。'},
+ {fx:'shake'},{noise:2},
+ {set:{HYU_BLUEDREAM:1}},
+ {memo:['青い夢','ヒュウは幼少期、白い部屋で「青い夢」を見せられていた。「先生」が関与。']},
+ {rel:['ヒュウ','—— 幼少期に実験?','「先生」',1]},
+ {ch:[
+  {t:'その「先生」は、カナタさんが呼んだ人と同じかもしれません',tag:'照合',req:{f:'JIN_TAPE'},eff:{'HYU.trust':10,'HYU.fear':15},set:{LINK_SENSEI:1},go:'hyu5'},
+  {t:'その先生の顔は、覚えていますか',tag:'確認',eff:{'HYU.trust':6,'HYU.fear':10},go:'hyu5'},
+  {t:'つらい記憶を、よく話してくれました',tag:'受容',eff:{'HYU.trust':12,'HYU.stress':-10},go:'hyu5'}
+ ]},
+
+ {n:'hyu5'},
+ {c:'HYU',say:'顔は、思い出せません。……ただ、歩き方は覚えています。'},
+ {c:'HYU',say:'左足を、引きずるように歩く人でした。'},
+ {noise:3},{fx:'flash'},
+ {evd:['跛行の男','ヒュウが幼少期に会った「先生」は左足を引きずっていた。カナタの録音の足音と一致。']},
+ {memo:['左足を引きずる男','ヒュウの記憶の「先生」。カナタ失踪時の足音とも符合。']},
+ {ch:[
+  {t:'ヒュウさん。あなたの目には今、失踪した人たちが見えますか',tag:'核心',eff:{'HYU.trust':6,'HYU.fear':20},go:'hyu_eye'},
+  {t:'今夜はここまでにしましょう。あなたが疲れています',tag:'配慮',eff:{'HYU.trust':10,'HYU.stress':-15},go:'hyu_rest'}
+ ]},
+
+ {n:'hyu_rest'},
+ {c:'HYU',say:'……お気遣い、痛み入ります。ですが、',slow:1},
+ {c:'HYU',say:'言わせてください。今言わないと、私はまた十年黙ってしまう。'},
+ {go:'hyu_eye'},
+
+ {n:'hyu_eye'},
+ {noise:2},
+ {nar:'長い沈黙。受話器の向こうで、前髪をかき上げる、かすかな衣擦れ。'},
+ {c:'HYU',say:'……見えます。'},
+ {c:'HYU',say:'最初から、見えていました。消えた人たちが、どこに立っているのか。'},
+ {c:'HYU',say:'ですが、怖くて、黙っていたのです。私が言えば、私も連れて行かれると思って。'},
+ {ch:[
+  {t:'今、話してくれた。それで十分です',tag:'受容',eff:{'HYU.trust':20,'HYU.fear':-10,'HYU.stress':-15},set:{HYU_EYE_01:1},go:'hyu_still'},
+  {t:'なぜ黙っていたんですか。人が消えているんですよ',tag:'指摘',eff:{'HYU.trust':-20,'HYU.stress':25,'HYU.fear':20},set:{HYU_BLAME:1},go:'hyu_blame'},
+  {t:'その目は、あなたを守るためにあったのかもしれません',tag:'受容',eff:{'HYU.trust':22,'HYU.fear':-15},set:{HYU_EYE_01:1},go:'hyu_still'}
+ ]},
+
+ {n:'hyu_blame'},
+ {c:'HYU',say:'……ええ。ええ、そうです。私のせいです。'},
+ {c:'HYU',say:'私は昔から、欠陥品ですから。先生もそう仰っていました。'},
+ {nar:'この一言を、あなたは後で何度も思い返すことになる。'},
+ {go:'hyu6'},
+
+ {n:'hyu_still'},
+ {still:'s06'},
+ {c:'HYU',say:'……ふふ。おかしな人だ。'},
+ {c:'HYU',say:'私はこの目を、ずっと呪いだと思っていました。'},
+ {know:['HYU','右目に「向こう側」と失踪者の位置が見える','幼少期に「青い夢」の実験を受けた']},
+ {go:'hyu6'},
+
+ {n:'hyu6'},
+ {day:8},
+ {card:['DAY 8','追跡','8月8日',3]},
+ {nar:'八日目、深夜零時四十分。ヒュウから、走りながらの着信。'},
+ {ring:'normal'},{noise:2},
+ {call:{who:'ヒュウ',c:'HYU',num:'080-XXXX-6621'}},
+ {c:'HYU',say:'……はっ、はっ……申し訳ありません、走っております……'},
+ {c:'HYU',say:'あなたに話したあと、確かめに行ったのです。私の目が示す場所へ。'},
+ {c:'HYU',say:'廃工場でした。人が……六人、立ったまま、眠っていて……'},
+ {fx:'shake'},
+ {c:'HYU',say:'そこに、足音が。左足を、引きずる音が。'},
+ {still:'s07'},
+ {noise:3},
+ {sys:'ヒュウの精神状態：危機<br>回線ノイズ：最大'},
+ {par:{c:'HYU',fear:45,stress:35}},
+ {sec:14},
+ {ch:[
+  {t:'切りませんから。走りながらでいい、ずっと喋っていて',tag:'伴走',
+   eff:{'HYU.trust':25,'HYU.fear':-20},set:{HYU_STAY_01:1},go:'hyu_run_stay'},
+  {t:'電話を切って、全力で走りなさい',tag:'指示',
+   eff:{'HYU.fear':10},set:{HYU_ALONE:1},go:'hyu_run_alone'},
+  {t:'落ち着いて。まず現在地を教えてください',tag:'確認',
+   eff:{'HYU.stress':15},go:'hyu_run_addr'},
+  {t:'（言葉に詰まる）',tag:'沈黙',silent:1,timeout:1,eff:{'HYU.fear':20,'HYU.trust':-10},go:'hyu_run_alone'}
+ ]},
+
+ {n:'hyu_run_addr'},
+ {c:'HYU',say:'……わ、分かりません、暗くて……看板が……「澪原第二……」'},
+ {memo:['廃工場','澪原第二工業団地。ヒュウが失踪者六人を目撃した場所。']},
+ {evd:['失踪者の所在','澪原第二工業団地の廃工場に、六人が立ったまま眠っている。']},
+ {sec:8},
+ {ch:[
+  {t:'よく言えました。切りませんから、そのまま喋って',tag:'伴走',eff:{'HYU.trust':20,'HYU.fear':-15},set:{HYU_STAY_01:1},go:'hyu_run_stay'},
+  {t:'切って走りなさい',tag:'指示',set:{HYU_ALONE:1},timeout:1,go:'hyu_run_alone'}
+ ]},
+
+ {n:'hyu_run_stay'},
+ {nar:'あなたは喋り続けた。意味のあることも、ないことも。'},
+ {nar:'相手の呼吸が乱れれば数を数え、足音が近づけば、名前を呼んだ。'},
+ {c:'HYU',say:'……あなたの声が、聞こえている間は……走れます……'},
+ {noise:3},
+ {nar:'そして——'},
+ {c:'HYU',say:'……あ。空が、逆さに——'},
+ {fx:'flash'},{fx:'shake'},
+ {hang:'回線断（無音）',hangKind:'silent'},
+ {nar:'通話は、音もなく終わった。切電音すら鳴らなかった。'},
+ {life:['HYU','消失']},
+ {sys:'ヒュウ ── 消息不明（生死不明）'},
+ {memo:['ヒュウの消失','通話中に音もなく回線が切れた。切電音なし。「空が、逆さに」が最後の言葉。']},
+ {go:'ch3_end'},
+
+ {n:'hyu_run_alone'},
+ {nar:'通話は切れた。ツー、ツー、という音が、いやに事務的に響く。'},
+ {nar:'折り返しをかける。呼び出し音。十回。二十回。'},
+ {nar:'——誰も出ない。'},
+ {life:['HYU','消失']},
+ {set:{HYU_LOST_BAD:1}},
+ {sys:'ヒュウ ── 消息不明（生死不明）'},
+ {memo:['ヒュウの消失','あなたの指示で通話を切った直後に連絡が途絶えた。']},
+ {go:'ch3_end'},
+
+ {n:'ch3_end'},
+ {noise:1},
+ {rec:{id:'r05',ti:'ヒュウ／最後の通話',tx:'走る呼吸。跛行の足音。「空が、逆さに——」で無音。',
+   hid:'ヒュウの声の裏に、別の男の低い声。「……逃げろ、と伝えろ」。剣を鞘に納める音。',flag:'NEO_VOICE_01'}},
+ {clock:'03:33'},
+ {ring:'old'},
+ {ch:[
+  {t:'受話器を取る',tag:'受電',go:'ch3_mun'},
+  {t:'今は、それどころではない',tag:'見送り',inc:{MUN_CUT_XX:1},go:'ch3_fin'}
+ ]},
+
+ {n:'ch3_mun'},
+ {call:{who:'ムニ(5歳)',c:'MUN',num:'0X-XXX-1994'}},
+ {c:'MUN',say:'……でんわのひと。げんきないの?'},
+ {ch:[
+  {t:'うん。ちょっと、悲しいことがあった',tag:'誠実',eff:{'MUN.trust':12},go:'ch3_mun2'},
+  {t:'ううん。だいじょうぶだよ',tag:'配慮',eff:{'MUN.trust':4},go:'ch3_mun2'}
+ ]},
+
+ {n:'ch3_mun2'},
+ {c:'MUN',say:'……あのね。かなしいときはね、だれかのこえ、おもいだすといいんだよ。'},
+ {c:'MUN',say:'ムニもね、こわいとき、でんわのひとのこえ、おもいだすの。そしたら、へいきになるの。'},
+ {nar:'胸の奥が、静かに軋んだ。'},
+ {ch:[
+  {t:'ムニ。それ、絶対に忘れないで。怖くなったら私の声を思い出して',tag:'教える',
+   eff:{'MUN.trust':18,'MUN.fear':-20},set:{MUN_TEACH_03:1},go:'ch3_mun3',
+   line:'ムニ。それ、絶対に忘れないで。——本当に怖いときは、私の声を思い出すんだよ。'},
+  {t:'ありがとう。ムニは強いね',tag:'受容',eff:{'MUN.trust':8},go:'ch3_mun3'}
+ ]},
+
+ {n:'ch3_mun3'},
+ {c:'MUN',say:'うん! ぜったい、わすれない!'},
+ {hang:'通話終了',hangKind:'normal'},
+ {go:'ch3_fin'},
+
+ {n:'ch3_fin'},
+ {noise:0},
+ {sys:'第三章 終了。<br><br>残された疑問：<br>・ヒュウは死んだのか<br>・録音に混ざった、もう一人の男は誰か<br>・「青い夢」とは何だったのか'},
+ {vm:['留守番電話 1件（異常）','番号表示が文字化けしている。<br>「——貴様に告ぐ。境界に届く耳を持つ者よ。次の夜、私の声を取れ」']},
+ {chap:'ch4'}
+];
+
+/* ---------------- 第四章 ---------------- */
+SCENARIO.ch4 = [
+ {chapTitle:'第四章 よふかし編'},
+ {card:['CHAPTER 4','よふかし編','DAY 9 ／ 8月9日',4]},
+ {day:9},
+ {nar:'九日目。ヒュウの携帯は、電源が入らないまま二日が過ぎた。'},
+ {nar:'ジンパチは十七回かけてきた。ゲルは一度もかけてこない。レニィは、いつもより静かだ。'},
+ {clock:'01:11'},
+ {noise:2},
+ {ring:'broken'},
+ {sys:'着信 — 01:11<br>番号：▓▓▓-▓▓▓▓-▓▓▓▓'},
+ {ch:[
+  {t:'受話器を取る',tag:'受電',go:'neo1'},
+  {t:'録音を回してから取る',tag:'記録',eff:{},set:{NEO_REC:1},go:'neo1',line:'（録音スイッチを入れてから、受話器を上げた）'},
+  {t:'取らない',tag:'見送り',set:{NEO_MISS:1},go:'neo_miss'}
+ ]},
+
+ {n:'neo_miss'},
+ {nar:'ベルは鳴りやまなかった。二十分。三十分。'},
+ {nar:'——四十七分後、あなたは受話器を取った。'},
+ {par:{c:'NEO',doubt:15}},
+ {go:'neo1'},
+
+ {n:'neo1'},
+ {noise:3},
+ {call:{who:'???',c:'NEO',num:'▓▓▓-▓▓▓▓'}},
+ {nar:'砂嵐。二重になった音声。時報のようなものが混ざる——「午前三時三十三分をお知らせします」。'},
+ {nar:'いま、午前一時十一分だ。'},
+ {c:'NEO',nm:'???',say:'——聞こえるか。私の声が。'},
+ {c:'NEO',nm:'???',say:'そうか。聞こえているな。貴様が、境界に届く耳の持ち主か。'},
+ {meet:'NEO',known:['高圧的な男の声','回線を「境界」と呼ぶ']},
+ {still:'s08'},
+ {ch:[
+  {t:'あなたが、人を攫っているのか',tag:'追及',eff:{'NEO.doubt':20,'NEO.trust':-5},go:'neo2'},
+  {t:'……あなたは、誰ですか',tag:'確認',eff:{'NEO.trust':5},go:'neo2'},
+  {t:'ヒュウを返してください',tag:'交渉',eff:{'NEO.trust':8},go:'neo2'},
+  {t:'（何も言わず、ただ聞く）',tag:'沈黙',silent:1,eff:{'NEO.trust':10},go:'neo2',line:'（あなたは何も言わず、聞くことに徹した）'}
+ ]},
+
+ {n:'neo2'},
+ {call:{who:'ネオ',c:'NEO',num:'▓▓▓-▓▓▓▓'}},
+ {c:'NEO',say:'私はネオ。渡岸の剣士だ。この地の裂け目を見張る任にある。'},
+ {c:'NEO',say:'先に言っておくが、人を攫ったのは私ではない。私は拾っているのだ。落ちてきた者をな。'},
+ {ch:[
+  {t:'……信じます。ヒュウは無事ですか',tag:'信頼',eff:{'NEO.trust':15},set:{NEO_ALLY_01:1},go:'neo3'},
+  {t:'証明できますか',tag:'確認',eff:{'NEO.trust':5,'NEO.doubt':10},go:'neo_proof'},
+  {t:'信じられません',tag:'拒絶',eff:{'NEO.trust':-15,'NEO.doubt':20},go:'neo_proof'}
+ ]},
+
+ {n:'neo_proof'},
+ {c:'NEO',say:'ふん。当然の反応だ。……ならば、これでどうだ。'},
+ {noise:2},
+ {c:'HYU',nm:'ヒュウ(遠い)',say:'……もし、もし。……ああ、繋がった。あなたの声だ。'},
+ {c:'HYU',nm:'ヒュウ(遠い)',say:'ご心配なく。私は美しいまま生きております。……少々、空が逆さですが。'},
+ {fx:'flash'},
+ {par:{c:'HYU',fear:-30,stress:-20}},
+ {set:{NEO_ALLY_01:1}},
+ {nar:'安堵が、体の芯から抜けていく。'},
+ {go:'neo3'},
+
+ {n:'neo3'},
+ {still:'s09'},
+ {c:'NEO',say:'その者の右目は、こちら側を見る。ゆえに落ちても壊れずに済んだ。'},
+ {c:'NEO',say:'……だが問題は別だ。この裂け目は、自然に開いたものではない。'},
+ {c:'NEO',say:'人の手で、こじ開けられている。十年前から、幾度もな。',slow:1},
+ {fx:'shake'},{noise:3},
+ {evd:['裂け目は人為的','ネオの証言。十年前から何者かが繰り返し境界をこじ開けている。']},
+ {tl:['10年前〜現在','何者かが繰り返し「裂け目」を人為的に開いている（ネオの証言）。']},
+ {rel:['「先生」','—— 裂け目をこじ開けた','渡岸',1]},
+ {ch:[
+  {t:'十年前の八月十四日、灯守園で何があったんですか',tag:'核心',eff:{'NEO.trust':10},go:'neo4'},
+  {t:'その人物を、あなたは見たんですか',tag:'確認',eff:{'NEO.trust':6},go:'neo4'}
+ ]},
+
+ {n:'neo4'},
+ {c:'NEO',say:'……あの夜のことは、私の恥だ。'},
+ {c:'NEO',say:'裂け目が開き、火が出た。私は駆けつけたが——剣は、火を斬れぬ。'},
+ {c:'NEO',say:'小さな者が一人、煙の中にいた。助けられなかった。'},
+ {nar:'高圧的な声が、初めて、途切れた。'},
+ {ch:[
+  {t:'……その子は、いまも電話をかけてきています',tag:'開示',eff:{'NEO.trust':20},set:{NEO_KNOW_MUN:1},go:'neo5'},
+  {t:'あなたのせいではありません',tag:'受容',eff:{'NEO.trust':12},go:'neo5'},
+  {t:'（黙って聞いていた）',tag:'沈黙',silent:1,eff:{'NEO.trust':8},go:'neo5',line:'（黙って、その沈黙ごと受け取った）'}
+ ]},
+
+ {n:'neo5'},
+ {c:'NEO',say:'……何だと。'},
+ {c:'NEO',say:'貴様、その電話を——十年前から受けているというのか。'},
+ {c:'NEO',say:'ならば急げ。境界の裂け目は「音」を伝う。回線が繋がっている限り、時は一本の線だ。'},
+ {c:'NEO',say:'貴様の声は、過去へ届く。……だが、期限がある。'},
+ {c:'NEO',say:'八月十四日。あの夜と、この夜が重なる日だ。'},
+ {sys:'重要：8月14日（DAY 14）に、十年前と現在が接続します。'},
+ {tl:['8/14（DAY14）','十年前の火災当夜と現在が接続する。裂け目が最大開放。']},
+ {set:{NEO_DEADLINE:1}},
+ {hang:'相手側が切電（無音）',hangKind:'silent'},
+ {rec:{id:'r06',ti:'ネオ／混線通話',tx:'「この裂け目は、人の手でこじ開けられている」。時報の混入。',
+   hid:'ネオの独白が逆再生で聞こえる。「……この声、覚えがある。十年前、渡岸に落ちてきたあの子どもと、同じ響きだ」',flag:'SEC_HINT_01'}},
+ {noise:1},
+
+ {day:10},
+ {card:['DAY 10','逆探知','8月10日',4]},
+ {nar:'十日目。あなたは通信会社の夜間窓口に、一晩かけて事情を説明した。'},
+ {nar:'ありえない番号の逆探知。担当者は最初笑い、次に黙り、最後にこう言った。'},
+ {sys:'「……お客様。この局番は、十年前に廃止された市外局番です」'},
+ {ch:[
+  {t:'発信元の住所を、教えてください',tag:'追及',eff:{},go:'trace'},
+  {t:'（震える手で、メモを構える）',tag:'記録',eff:{},go:'trace'}
+ ]},
+
+ {n:'trace'},
+ {noise:3},{fx:'shake'},
+ {sys:'発信元：澪原市 灯守園 礼拝堂 公衆電話<br>設置：25年前　撤去：10年前（火災による焼失）'},
+ {still:'s10'},
+ {nar:'撤去された電話から、電話がかかってきている。'},
+ {nar:'——ムニは、十年前から、かけている。'},
+ {fx:'flash'},
+ {set:{TRACE_DONE:1}},
+ {tl:['判明','ムニの発信元は、十年前に焼失した灯守園礼拝堂の公衆電話。']},
+ {memo:['逆探知の結果','ムニの電話は、十年前の灯守園から。彼の「明日」は、8月14日の火災の日。']},
+ {rel:['ムニ','—— 十年前から発信','いま',1]},
+ {ch:[
+  {t:'……それなら、火事の前に逃がせる',tag:'決意',eff:{},set:{RESOLVE:1},go:'trace2'},
+  {t:'（受話器を持ったまま、しばらく動けなかった）',tag:'沈黙',silent:1,go:'trace2'}
+ ]},
+
+ {n:'trace2'},
+ {clock:'03:33'},
+ {ring:'old'},
+ {ch:[
+  {t:'受話器を取る',tag:'受電',go:'mun_d10'},
+  {t:'……いまは、取れない',tag:'見送り',inc:{MUN_CUT_XX:1},go:'ch4_end'}
+ ]},
+
+ {n:'mun_d10'},
+ {call:{who:'ムニ(5歳／10年前)',c:'MUN',num:'0X-XXX-1994'}},
+ {c:'MUN',say:'でんわのひと! きょうね、おにいちゃんとけんかしちゃった。'},
+ {c:'MUN',say:'ムニのりんごあめ、おっきいほうとりかえっこしたのに、おこられたの。'},
+ {nar:'——この子は、あと四日で死ぬ。'},
+ {nar:'そう思った瞬間、喉の奥が塩辛くなった。'},
+ {ch:[
+  {t:'ムニ。よく聞いて。八月十四日の夜、火が出る',tag:'警告',eff:{'MUN.fear':30,'MUN.trust':5},set:{MUN_WARN:1},go:'mun_warn'},
+  {t:'ケンカしても、お兄ちゃんのことは好き?',tag:'傾聴',eff:{'MUN.trust':12},go:'mun_love'},
+  {t:'（何も言えない）',tag:'沈黙',silent:1,eff:{'MUN.stress':8},go:'mun_love'}
+ ]},
+
+ {n:'mun_warn'},
+ {c:'MUN',say:'……ひ? かじ?'},
+ {c:'MUN',say:'こわい。こわいよぉ。……でんわのひと、うそだよね?'},
+ {nar:'恐怖だけを渡してしまった。五歳の子どもに、逃げ方のない恐怖を。'},
+ {par:{c:'MUN',fear:20}},
+ {ch:[
+  {t:'嘘じゃない。でも、逃げ方を一緒に覚えよう。ムニなら絶対にできる',tag:'教える',
+   eff:{'MUN.fear':-25,'MUN.trust':15},set:{MUN_TEACH_READY:1},go:'mun_love'},
+  {t:'ごめん、嘘だよ。忘れて',tag:'撤回',eff:{'MUN.trust':-10,'MUN.doubt':15},go:'mun_love'}
+ ]},
+
+ {n:'mun_love'},
+ {c:'MUN',say:'……うん。すきだよ。おにいちゃん、よくねるけど、やさしいもん。'},
+ {c:'MUN',say:'あのね。おにいちゃんのなまえ、おしえてあげる。ないしょだよ?'},
+ {c:'MUN',say:'——レニィっていうの。',slow:1},
+ {fx:'shake'},{noise:3},{fx:'flash'},
+ {nar:'受話器を落としそうになった。'},
+ {rel:['ムニ','—— 弟','レニィ']},
+ {tl:['10年前 8/14','灯守園の火災で死亡した園児は、レニィの弟・ムニ。']},
+ {memo:['ムニとレニィ','ムニはレニィの弟。十年前の火災で死んだ園児は、ムニ本人。']},
+ {set:{LINK_BRO:1}},
+ {ch:[
+  {t:'……ムニ。約束して。八月十四日の夜、私の言うとおりに逃げて',tag:'約束',
+   eff:{'MUN.trust':20},set:{MUN_VOW:1},go:'mun_vow'},
+  {t:'いいお兄ちゃんだね',tag:'受容',eff:{'MUN.trust':8},go:'ch4_end'}
+ ]},
+
+ {n:'mun_vow'},
+ {c:'MUN',say:'……うん。ムニ、やくそくする。'},
+ {c:'MUN',say:'でんわのひとのいうこと、ぜんぶおぼえる。'},
+ {hang:'通話終了',hangKind:'normal'},
+ {go:'ch4_end'},
+
+ {n:'ch4_end'},
+ {noise:0},
+ {sys:'第四章 終了。<br><br>残された疑問：<br>・十年前のムニを、本当に救えるのか<br>・裂け目をこじ開けた「人の手」とは誰か<br>・レニィは、なぜ弟を忘れているのか'},
+ {vm:['留守番電話 1件','ゲルの声。「……明日の夜、話がある。私のことだ。<br>それと、そちらの棚の一番下を見ておけ。前任者の私物が、まだ残っているはずだ」']},
+ {chap:'ch5'}
+];
+
+/* ---------------- 第五章 ---------------- */
+SCENARIO.ch5 = [
+ {chapTitle:'第五章 ほむら編'},
+ {card:['CHAPTER 5','ほむら編','DAY 11 ／ 8月11日',5]},
+ {day:11},
+ {nar:'十一日目。出勤してすぐ、あなたは資料棚の一番下を開けた。'},
+ {ch:[
+  {t:'段ボール箱を開ける',tag:'調査',go:'tape_find'},
+  {t:'先に業務を始める',tag:'保留',go:'ger_call'}
+ ]},
+
+ {n:'tape_find'},
+ {nar:'古い段ボール。相談員手帳、乾いたボールペン、そして——カセットテープが一本。'},
+ {nar:'ラベルには、擦れた手書きの文字。'},
+ {sys:'「8/14　3:33　未対応」'},
+ {still:'s12'},
+ {set:{EVD_TAPE_01:1}},
+ {evd:['室井のテープ','十年前の火災当夜、3:33の着信を録音したテープ。ラベルに「未対応」。']},
+ {ch:[
+  {t:'再生する',tag:'再生',go:'tape_play'},
+  {t:'……いまは、聞けない',tag:'保留',go:'ger_call'}
+ ]},
+
+ {n:'tape_play'},
+ {noise:2},
+ {c:'MUN',nm:'ムニ(10年前の録音)',say:'……もしもし。あのね、けむりが。せんせいがおきないの。'},
+ {c:'MRI',nm:'相談員(室井)',say:'……あのね、坊や。こんな時間にいたずらは駄目だよ。おうちの人に代わってくれる?'},
+ {c:'MUN',nm:'ムニ(10年前の録音)',say:'いたずらじゃないよ! あついよ! たすけて!'},
+ {nar:'——切電音。'},
+ {fx:'shake'},{fx:'flash'},
+ {nar:'テープはそこで終わらない。数十秒の無音のあと、震える男の声が入っている。'},
+ {c:'MRI',nm:'室井',say:'……八月十五日、朝。灯守園で火災。園児一名死亡。',slow:1},
+ {c:'MRI',nm:'室井',say:'私は、あの電話を切った。',slow:1},
+ {c:'MRI',nm:'室井',say:'……それと、どうしても分からないことがある。園児は七人いたはずだ。'},
+ {c:'MRI',nm:'室井',say:'六人は保護された。一人は死んだ。……なら、七人目の子は、どこへ消えたんだ。',slow:1},
+ {noise:3},
+ {set:{MRI_TAPE_HEARD:1}},
+ {rec:{id:'r07',ti:'室井のテープ',tx:'十年前3:33のムニのSOSと、切電。そして室井の独白「七人目の子は、どこへ消えたんだ」。',
+   hid:'独白の後ろで、もう一つ小さな息づかい。室井の隣に、誰かがいる。子どもの背丈の位置に。',flag:'SEC_HINT_02'}},
+ {memo:['七人目の子','十年前、灯守園には園児が七人。六人保護、一人死亡。残る一人の行方は記録にない。']},
+ {tl:['10年前 8/14','園児七人のうち六人保護・一人死亡。「七人目」の行方は不明。']},
+ {rel:['七人目の子','—— 行方不明','???',1]},
+ {noise:1},
+ {go:'ger_call'},
+
+ {n:'ger_call'},
+ {clock:'23:30'},
+ {ring:'normal'},
+ {call:{who:'ゲル',c:'GER',num:'非通知'}},
+ {c:'GER',say:'……夜分にすまない。今日は、こちらの話をする。'},
+ {c:'GER',say:'私は記者ではない。いや、記者でもあるが、それは口実だ。'},
+ {c:'GER',say:'放火犯とされた当直職員——剛三は、私の父だ。',slow:1},
+ {still:'s11'},
+ {know:['GER','放火犯とされた職員・剛三の娘','父の無実を証明するため十年調べている']},
+ {rel:['ゲル','—— 娘','剛三（当直職員）']},
+ {ch:[
+  {t:'……よく、話してくれました',tag:'受容',eff:{'GER.trust':15,'GER.stress':-10},go:'ger_c2'},
+  {t:'最初から、そう言ってくれればよかったのに',tag:'指摘',eff:{'GER.trust':-5,'GER.stress':8},go:'ger_c2'},
+  {t:'そうだと思っていました',tag:'看破',req:{f:'GER_LIE_01'},eff:{'GER.trust':10,'GER.doubt':-10},set:{GER_ID_01:1},go:'ger_c2'}
+ ]},
+
+ {n:'ger_c2'},
+ {c:'GER',say:'父は最後まで言い張った。「子どもが電話をかけに行った」「火は礼拝堂の奥から出た」と。'},
+ {c:'GER',say:'誰も信じなかった。……私も、正直、九割は信じていなかった。'},
+ {c:'GER',say:'だが一割が、十年間、私の胸に刺さったままだ。'},
+ {ch:[
+  {t:'その一割を、証明できるものがあります',tag:'開示',req:{f:'EVD_TAPE_01'},eff:{'GER.trust':20},set:{GER_TAPE_KNOW:1},go:'ger_tape'},
+  {t:'お父さんのこと、聞かせてください',tag:'傾聴',eff:{'GER.trust':12,'GER.stress':-8},go:'ger_c3'}
+ ]},
+
+ {n:'ger_tape'},
+ {nar:'あなたはテープの内容を伝えた。ムニの声。切電。そして室井の独白。'},
+ {nar:'受話器の向こうで、長い、長い沈黙。'},
+ {c:'GER',say:'……そうか。子どもは、本当に電話をかけていたのか。'},
+ {c:'GER',say:'父は、嘘つきじゃなかったんだな。'},
+ {nar:'声が、崩れた。'},
+ {c:'GER',say:'……すまない。少し、待ってくれ。'},
+ {nar:'十七秒。受話器を離した先で、押し殺した嗚咽が聞こえた。'},
+ {ch:[
+  {t:'（何も言わず、待った）',tag:'沈黙',silent:1,eff:{'GER.trust':18,'GER.stress':-20},go:'ger_c3'},
+  {t:'泣いていいんですよ',tag:'受容',eff:{'GER.trust':12,'GER.stress':-15},go:'ger_c3'}
+ ]},
+
+ {n:'ger_c3'},
+ {c:'GER',say:'……ありがとう。十年ぶりに、お父さんと呼べた気がする。',slow:1},
+ {c:'GER',say:'そして、報告がある。奴を見つけた。'},
+ {c:'GER',say:'灰堂帰一。十六年前から灯守園の顧問医だった男だ。いまは市内の病院に潜っている。'},
+ {c:'GER',say:'左足を引きずって歩く。……心当たりがあるだろう。'},
+ {meet:'KAI'},
+ {evd:['灰堂帰一','元灯守園顧問医。左足を引きずる。市内の病院に潜伏。']},
+ {ch:[
+  {t:'証拠を照合します。跛行・録音・テープ——三点が繋がる',tag:'照合',
+   req:{and:[{f:'EVD_TAPE_01'},{or:[{f:'EVD_KAI_STEP'},{f:'EVD_KAI_STEP2'}]}]},
+   set:{KAI_EXPOSE_01:1},eff:{'GER.trust':10},go:'kai_expose'},
+  {t:'まだ、証拠が足りません',tag:'保留',go:'ger_c4'}
+ ]},
+
+ {n:'kai_expose'},
+ {fx:'flash'},{noise:2},
+ {sys:'照合完了<br>・ムニの通話背後の足音（10年前）<br>・カナタの録音の足音（現在）<br>・室井のテープの証言<br>——同一人物：灰堂帰一'},
+ {evd:['灰堂の犯行立証','十年前の火災と現在の失踪、両方の現場に灰堂の足音。青い夢計画の実行者。']},
+ {tl:['10年前〜現在','灰堂帰一が〈青い夢計画〉として被験者を選別・拉致していたと判明。']},
+ {rel:['灰堂帰一','—— 実行者','青い夢計画']},
+ {rel:['灰堂帰一','—— 冤罪を着せた','剛三']},
+ {go:'ger_c4'},
+
+ {n:'ger_c4'},
+ {c:'GER',say:'……で、だ。私はこれから、奴のところへ行こうと思っている。'},
+ {nar:'声の底に、刃物のような硬さがある。'},
+ {nar:'——彼女は、復讐に行くつもりだ。'},
+ {sec:16},
+ {ch:[
+  {t:'ゲルさん。お父さんを無実にできるのは、復讐ではなく記録です',tag:'説得',
+   req:{tr:['GER',50]},eff:{'GER.trust':15,'GER.stress':-10},set:{GER_KNIFE_01:1},go:'ger_stop'},
+  {t:'あなたが手を汚したら、剛三さんはもう一度犯罪者になる',tag:'説得',
+   req:{f:'EVD_TAPE_01'},eff:{'GER.trust':12},set:{GER_KNIFE_01:1},go:'ger_stop'},
+  {t:'……気持ちは分かります',tag:'受容',eff:{'GER.trust':5,'GER.fear':10},go:'ger_go'},
+  {t:'（止められなかった）',tag:'沈黙',silent:1,timeout:1,eff:{'GER.stress':15},go:'ger_go'}
+ ]},
+
+ {n:'ger_stop'},
+ {nar:'長い沈黙のあと、鞄の中で金属が擦れる音がした。何かを、置いた音だ。'},
+ {c:'GER',say:'……ああ。そうだな。'},
+ {c:'GER',say:'私が刺したら、父はただの「殺人犯の父親」で終わる。それは、いやだ。'},
+ {c:'GER',say:'警察と弁護士に、テープの話をしてくる。……礼を言う。柄じゃないがな。'},
+ {par:{c:'GER',trust:10,fear:-15,stress:-15}},
+ {go:'d12'},
+
+ {n:'ger_go'},
+ {c:'GER',say:'……止めないんだな。ありがとう。'},
+ {hang:'相手側が切電',hangKind:'cut'},
+ {nar:'それが、その夜の最後の言葉になった。'},
+ {par:{c:'GER',fear:30}},
+ {go:'d12'},
+
+ {n:'d12'},
+ {day:12},
+ {card:['DAY 12','消えた声','8月12日',5]},
+ {clock:'22:05'},
+ {ring:'normal'},
+ {call:{who:'ジンパチ',c:'JIN',num:'090-XXXX-4408'}},
+ {c:'JIN',say:'おい、大変だ! レニィが帰ってねえ!'},
+ {c:'JIN',say:'あいつ、昨日「思い出しそうなんだ」とか言って、施設の跡地に行くって——'},
+ {fx:'shake'},{noise:2},
+ {par:{c:'JIN',fear:30,stress:25}},
+ {ch:[
+  {t:'落ち着いて。まず、レニィが最後に何と言ったか正確に',tag:'確認',eff:{'JIN.stress':-10},go:'jin_d12'},
+  {t:'すぐ警察に。あなたは動かないで',tag:'指示',eff:{'JIN.trust':5},go:'jin_d12'}
+ ]},
+
+ {n:'jin_d12'},
+ {c:'JIN',say:'「弟がいた気がする」って言ってた。……あいつ、一人っ子だぞ?'},
+ {c:'JIN',say:'俺、行く。跡地に行く。あんたが止めても行く。'},
+ {sec:14},
+ {ch:[
+  {t:'ジンパチ。一人で行くな。——俺を頼れと、あなたなら言うはずだ',tag:'説得',
+   req:{tr:['JIN',55]},eff:{'JIN.trust':15,'JIN.stress':-15},set:{JIN_RUSH_01:1},go:'jin_stop'},
+  {t:'カナタさんの電話に出られなかったことを、もう一度繰り返しますか',tag:'核心',
+   req:{f:'JIN_CALL_MISS'},eff:{'JIN.trust':10,'JIN.stress':10},set:{JIN_RUSH_01:1},go:'jin_stop'},
+  {t:'行くなら、ゲルさんと一緒に行ってください',tag:'条件',req:{f:'GER_KNIFE_01'},
+   eff:{'JIN.trust':8},set:{JIN_RUSH_01:1},go:'jin_stop'},
+  {t:'……気をつけて',tag:'黙認',eff:{'JIN.fear':20},go:'jin_rush'},
+  {t:'（止められない）',tag:'沈黙',silent:1,timeout:1,go:'jin_rush'}
+ ]},
+
+ {n:'jin_stop'},
+ {nar:'受話器の向こうで、荒い息が、ゆっくり整っていく。'},
+ {c:'JIN',say:'……ちくしょう。あんた、ずるいぜ。'},
+ {c:'JIN',say:'わかった。待つ。ゲルさんと合流して、警察も連れてく。'},
+ {c:'JIN',say:'——だからあんたは、電話の前にいてくれ。俺たちの声を、切らないでくれよ。'},
+ {par:{c:'JIN',trust:10,fear:-20}},
+ {go:'len_call12'},
+
+ {n:'jin_rush'},
+ {c:'JIN',say:'おう。……行ってくる。'},
+ {hang:'相手側が切電',hangKind:'cut'},
+ {nar:'呼び出し音は、それから二度と繋がらなかった。'},
+ {par:{c:'JIN',fear:40}},
+ {go:'len_call12'},
+
+ {n:'len_call12'},
+ {clock:'02:40'},
+ {noise:2},
+ {ring:'normal'},
+ {sys:'着信 — 02:40<br>番号：080-XXXX-2213（レニィ）'},
+ {ch:[{t:'受話器を取る',tag:'受電',go:'len12'}]},
+
+ {n:'len12'},
+ {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
+ {c:'LEN',say:'……もしもし。あのね、僕、いま、へんなところにいるんだよぉ。'},
+ {c:'LEN',say:'焦げたにおいがする。……ここ、知ってる。ずっと夢で見てた場所だ。'},
+ {nar:'背後で、水滴の音。反響。石造りの空間。'},
+ {ch:[
+  {t:'レニィ。周りに何が見える? ゆっくりでいい',tag:'確認',eff:{'LEN.trust':6},go:'len12b'},
+  {t:'今すぐそこを出て。誰かが来る前に',tag:'指示',eff:{'LEN.fear':20},go:'len12b'},
+  {t:'大丈夫。私はここにいる。何があっても切らない',tag:'伴走',eff:{'LEN.trust':15,'LEN.fear':-10},set:{LEN_STAY:1},go:'len12b'}
+ ]},
+
+ {n:'len12b'},
+ {c:'LEN',say:'……壁に、黒い跡がいっぱい。子どもの背の高さのとこに、線がひいてある。'},
+ {c:'LEN',say:'……あ。ここ、僕、はかってもらってた。せいくらべ。'},
+ {c:'LEN',say:'僕の下に、もうひとつ線がある。ちいさい線。'},
+ {nar:'呼吸が、震えはじめる。'},
+ {sec:12},
+ {ch:[
+  {t:'レニィ。その線の名前を、読んで',tag:'核心',req:{tr:['LEN',60]},
+   eff:{'LEN.trust':10,'LEN.fear':15},set:{LEN_REMEMBER:1},go:'len_remember'},
+  {t:'思い出さなくていい。いまはそこを離れて',tag:'配慮',eff:{'LEN.fear':-10},go:'len_leave'},
+  {t:'（言葉が出ない）',tag:'沈黙',silent:1,timeout:1,eff:{'LEN.fear':15},go:'len_leave'}
+ ]},
+
+ {n:'len_remember'},
+ {noise:3},{fx:'shake'},
+ {c:'LEN',say:'……ム、ニ。'},
+ {c:'LEN',say:'ムニ。ムニだ。……僕の、弟だ。',slow:1},
+ {c:'LEN',say:'なんで。なんで忘れてたんだよ、僕。'},
+ {fx:'flash'},
+ {set:{LEN_REMEMBER:1,STORY_TRUE_KEY:1}},
+ {tlfix:['10年前 8/14','灯守園の火災で死亡した園児は、レニィの弟・ムニ（5歳）。兄は記憶を封じた。']},
+ {memo:['レニィの記憶','弟の名を思い出した。忘れることで、彼は生き延びていた。']},
+ {ch:[
+  {t:'忘れていたのは、あなたが弱かったからじゃない',tag:'受容',eff:{'LEN.trust':20,'LEN.stress':-20},go:'len_kai'},
+  {t:'よく、思い出してくれました',tag:'受容',eff:{'LEN.trust':15},go:'len_kai'}
+ ]},
+
+ {n:'len_leave'},
+ {c:'LEN',say:'……うん。出るね。……あれ。'},
+ {go:'len_kai'},
+
+ {n:'len_kai'},
+ {noise:3},
+ {nar:'——足音。'},
+ {nar:'左右非対称の、引きずるような足音が、石の床に反響する。'},
+ {c:'KAI',nm:'???',say:'やあ。よく戻ってきたね、レニィくん。'},
+ {c:'KAI',nm:'???',say:'七人目が見つからないまま十年だ。だが君がいれば、あの夜をやり直せる。'},
+ {c:'LEN',say:'……だ、だれ——'},
+ {fx:'shake'},{fx:'flash'},
+ {hang:'回線断（無音）',hangKind:'silent'},
+ {noise:2},
+ {sys:'通話が切断されました。'},
+ {ch:[
+  {t:'折り返す',tag:'発信',go:'len_redial'},
+  {t:'ジンパチとゲルに連絡する',tag:'発信',req:{and:[{f:'JIN_RUSH_01'},{f:'GER_KNIFE_01'}]},go:'call_ally'},
+  {t:'警察に通報する',tag:'通報',go:'len_police'}
+ ]},
+
+ {n:'len_redial'},
+ {nar:'呼び出し音。三回。四回。……留守番電話に切り替わる。'},
+ {vm:['レニィの携帯（自動応答）','「……はい、レニィだよぉ。いま出られないから、メッセージ入れてね」。<br>陽気な、録音された声。']},
+ {go:'len_after'},
+
+ {n:'len_police'},
+ {sys:'通報を受理。ただし「跡地は立入禁止区域であり、確認には時間がかかる」との回答。'},
+ {go:'len_after'},
+
+ {n:'call_ally'},
+ {call:{who:'ジンパチ／ゲル（三者通話）',c:'JIN',num:'090-XXXX-4408'}},
+ {c:'JIN',say:'聞こえてるぜ。俺とゲルさん、いま跡地の入口だ。警察も呼んである。'},
+ {c:'GER',say:'指示をくれ。私たちは目が二つしかないが、お前には全員の声が届いている。'},
+ {set:{ALLY_READY:1}},
+ {par:{c:'JIN',trust:10},},
+ {nar:'あなたは電話の前から動けない。だからこそ、あなたにしか見えないものがある。'},
+ {go:'len_after'},
+
+ {n:'len_after'},
+ {if:{or:[{f:'LEN_REMEMBER'},{tr:['LEN',55]}]}, then:'len_alive', els:'len_taken'},
+
+ {n:'len_taken'},
+ {life:['LEN','消失']},
+ {sys:'レニィ ── 消息不明'},
+ {nar:'その夜、レニィの携帯は圏外になった。跡地には、誰もいなかった。'},
+ {go:'ch5_end'},
+
+ {n:'len_alive'},
+ {nar:'午前三時五十分。着信。番号は、レニィ。'},
+ {ring:'normal'},
+ {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
+ {c:'LEN',say:'……はぁ、はぁ。……逃げた。逃げてきたよ。'},
+ {c:'LEN',say:'僕、思い出したから。あの人が来たとき、身体が勝手に走ったんだ。'},
+ {c:'LEN',say:'弟が待ってるから、こんなとこで捕まってらんないよぉ。'},
+ {set:{LEN_ESCAPE:1}},
+ {par:{c:'LEN',fear:-20,stress:-15,trust:10}},
+ {go:'ch5_end'},
+
+ {n:'ch5_end'},
+ {noise:0},
+ {sys:'第五章 終了。<br><br>残された疑問：<br>・八月十四日、何が起きるのか<br>・「七人目の子」とは誰なのか'},
+ {vm:['留守番電話 1件（文字化け）','ネオの声。「明晩だ。三時三十三分、境界が最も薄くなる。<br>——貴様は、三つの回線を同時に握ることになる。覚悟しておけ」']},
+ {chap:'fin'}
+];
+
+/* ---------------- 終章 ---------------- */
+SCENARIO.fin = [
+ {chapTitle:'終章 あさやけ編'},
+ {card:['FINAL CHAPTER','あさやけ編','DAY 13 ／ 8月13日',6]},
+ {day:13},
+ {nar:'十三日目。街は静かで、霧が濃い。明日は、十年前の火災の日。'},
+ {nar:'あなたは相談室に三台の電話を並べた。回線を三つ、同時に開くために。'},
+ {sys:'準備できることは、あと少しだけあります。'},
+
+ {ch:[
+  {t:'ヒュウとネオに、連携を頼む',tag:'発信',req:{and:[{f:'HYU_EYE_01'},{f:'NEO_ALLY_01'}]},
+   set:{NEO_HYU_01:1},go:'prep_neo'},
+  {t:'ムニに、逃げ方の続きを教える',tag:'発信',go:'prep_mun'},
+  {t:'何もせず、明日を待つ',tag:'保留',go:'d14'}
+ ]},
+
+ {n:'prep_neo'},
+ {noise:2},
+ {call:{who:'ネオ／ヒュウ',c:'NEO',num:'▓▓▓-▓▓▓▓'}},
+ {c:'NEO',say:'……話は聞いた。裂け目は内側からも閉じられる。だが一人では、閉じた瞬間に私も消える。'},
+ {c:'HYU',say:'ですから、私が座標を視ます。ネオ殿が斬り、私が指し、あなたが繋ぐ。'},
+ {c:'HYU',say:'……ふふ。三人がかりでようやく一人前とは、我ながら美しくない話ですが。'},
+ {ch:[
+  {t:'三人で一人前なら、それでいい。誰も欠けないやり方を選ぼう',tag:'連携',
+   eff:{'HYU.trust':15,'NEO.trust':15},set:{NEO_HYU_01:1},go:'prep_neo2'},
+  {t:'ヒュウ。無理はしないで',tag:'配慮',eff:{'HYU.trust':8},set:{NEO_HYU_01:1},go:'prep_neo2'}
+ ]},
+
+ {n:'prep_neo2'},
+ {c:'NEO',say:'……ふん。人間というのは、面倒な繋がり方をするものだな。'},
+ {c:'NEO',say:'だが、悪くない。'},
+ {par:{c:'NEO',trust:10}},
+ {par:{c:'HYU',fear:-20,stress:-20}},
+ {hang:'通話終了',hangKind:'normal'},
+ {go:'prep_mun'},
+
+ {n:'prep_mun'},
+ {clock:'03:33'},
+ {ring:'old'},
+ {ch:[
+  {t:'受話器を取る',tag:'受電',go:'prep_mun2'},
+  {t:'取らない',tag:'見送り',inc:{MUN_CUT_XX:1},go:'d14'}
+ ]},
+
+ {n:'prep_mun2'},
+ {call:{who:'ムニ(10年前)',c:'MUN',num:'0X-XXX-1994'}},
+ {c:'MUN',say:'でんわのひと。……きょう、おまつりだったよ。'},
+ {c:'MUN',say:'おにいちゃんと、りんごあめ、はんぶんこした。'},
+ {nar:'——十年前の八月十三日。明日の夜、この子の世界は燃える。'},
+ {ch:[
+  {t:'ムニ。煙が出たら、どうするんだった?',tag:'確認',req:{and:[{f:'MUN_TEACH_01'},{nf:'MUN_CHK1'}]},
+   eff:{'MUN.trust':8},set:{MUN_CHK1:1},go:'prep_check1'},
+  {t:'ムニ。裏の物置の鍵は、消火栓の箱の中にあるよ',tag:'教える',
+   hide:{and:[{loop:2},{f:'EVD_TAPE_01'}]},req:{and:[{f:'LEN_REMEMBER'},{nf:'MUN_TEACH_02'}]},
+   set:{MUN_TEACH_02:1},eff:{'MUN.trust':12},go:'prep_key',
+   line:'ムニ。よく聞いて。裏の物置の鍵は、廊下のいちばん奥、消火栓の箱の中にある。そこから外に出られる。'},
+  {t:'怖くなったら、私の声を思い出して',tag:'教える',req:{nf:'MUN_TEACH_03'},
+   eff:{'MUN.trust':15,'MUN.fear':-20},set:{MUN_TEACH_03:1},go:'prep_check3'},
+  {t:'……おやすみ、ムニ',tag:'別れ',eff:{'MUN.trust':5},go:'d14'}
+ ]},
+
+ {n:'prep_check1'},
+ {c:'MUN',say:'ひくくなって、はって、にげる! おぼえてるよ!'},
+ {set:{MUN_TEACH_01:1}},
+ {go:'prep_loop'},
+
+ {n:'prep_key'},
+ {nar:'——なぜ、あなたはその場所を知っているのか。'},
+ {nar:'レニィが思い出した記憶。室井のテープ。そして、あなた自身のどこかにある、名前のない確信。'},
+ {c:'MUN',say:'しょうかせんのはこ。……うん。ムニ、みたことある。ちいさいかぎでしょ?'},
+ {c:'MUN',say:'おぼえた。ぜったいわすれない。'},
+ {memo:['ムニに教えたこと②','裏の物置の鍵は廊下奥の消火栓の箱の中。そこから外へ出られる。']},
+ {go:'prep_loop'},
+
+ {n:'prep_check3'},
+ {c:'MUN',say:'うん。でんわのひとのこえ、ちゃんとおぼえてる。'},
+ {c:'MUN',say:'……ねえ。あしたも、おはなしできる?'},
+ {ch:[
+  {t:'できる。必ず、明日もここにいる',tag:'約束',eff:{'MUN.trust':20},set:{MUN_PROMISE2:1},go:'prep_loop'}
+ ]},
+
+ {n:'prep_loop'},
+ {ch:[
+  {t:'（まだ伝えることがある）',tag:'続ける',go:'prep_mun2'},
+  {t:'……おやすみ、ムニ。また明日',tag:'終える',go:'d14'}
+ ]},
+
+ {n:'d14'},
+ {hang:'通話終了',hangKind:'normal'},
+ {day:14},
+ {card:['DAY 14','8月14日','十年前と、今夜が重なる',6]},
+ {noise:2},
+ {nar:'十四日目。八月十四日。'},
+ {nar:'霧が、建物の三階まで上がってきている。時計の秒針が、ときどき同じ場所で二度鳴る。'},
+ {clock:'23:00'},
+ {sys:'回線状況：不安定<br>三台の電話が、すべて同時に着信しています。'},
+ {ring:'broken'},
+ {still:'s14'},
+ {sys:'【1】跡地 ── ジンパチ／ゲル<br>【2】渡岸 ── ネオ／ヒュウ<br>【3】0X-XXX-1994 ── ムニ（十年前）'},
+ {nar:'三本。同時に。あなたの手は二本しかない。'},
+ {ch:[
+  {t:'【1】跡地の二人を取る',tag:'選択',go:'line1'},
+  {t:'【2】渡岸を取る',tag:'選択',go:'line2'},
+  {t:'【3】十年前を取る',tag:'選択',go:'line3'},
+  {t:'保留を使い、三本すべてを繋いだままにする',tag:'技術',go:'line_all'}
+ ]},
+
+ {n:'line_all'},
+ {nar:'あなたは保留ボタンを押し、受話器を肩に挟み、コードを絡ませながら三本を同時に開いた。'},
+ {nar:'業務規程には違反している。今日だけは、どうでもいい。'},
+ {set:{THREE_LINES:1}},
+ {sys:'三回線 同時接続 ── 保留切替でそれぞれに応答します。'},
+ {go:'line1'},
+
+ {n:'line1'},
+ {if:{nf:'GER_KNIFE_01'}, then:'ger_alone'},
+ {go:'line1_join'},
+
+ {n:'ger_alone'},
+ {noise:3},
+ {nar:'ゲルの携帯は、繋がらない。'},
+ {nar:'折り返し発信——呼び出し音。十二回。そして、誰かが出た。'},
+ {c:'KAI',nm:'灰堂',say:'ああ、この電話の持ち主かね。……残念だが、彼女はもう、こちら側だ。'},
+ {hang:'相手側が切電（無音）',hangKind:'silent'},
+ {life:['GER','消失']},
+ {sys:'ゲル ── 消息不明'},
+
+ {n:'line1_join'},
+ {call:{who:'【1】跡地',c:'JIN',num:'跡地'}},
+ {if:{f:'JIN_RUSH_01'}, then:'line1_ok', els:'line1_bad'},
+
+ {n:'line1_bad'},
+ {noise:3},
+ {c:'JIN',say:'……おい、なんだよこれ、床が……ぐらぐら——'},
+ {hang:'回線断（無音）',hangKind:'silent'},
+ {life:['JIN','消失']},
+ {sys:'ジンパチ ── 消息不明'},
+ {nar:'一人で行かせてしまった。彼は、最後まで名前を呼んでいた。'},
+ {go:'line2'},
+
+ {n:'line1_ok'},
+ {c:'JIN',say:'着いたぜ! 礼拝堂の跡だ。地面に……穴が開いてる。空が、逆さに見える!'},
+ {if:{alive:'GER'}, then:'line1_ger', els:'line1_solo'},
+ {n:'line1_ger'},
+ {c:'GER',say:'灰堂もいる。装置を組んでいるな。……レニィくんも、そこだ。'},
+ {go:'line1_ask'},
+ {n:'line1_solo'},
+ {c:'JIN',say:'……ゲルさんが来ねえ。連絡もつかねえ。くそっ、一人でも見つける。'},
+ {n:'line1_ask'},
+ {sec:15},
+ {ch:[
+  {t:'ジンパチ、灰堂に近づくな。ゲルさん、警察の到着まで記録を',tag:'指示',
+   eff:{'JIN.fear':-10},set:{PLAN_A:1},go:'line1b'},
+  {t:'二人とも、灰堂の左足を見て。跛行が証拠になる',tag:'指示',req:{f:'KAI_EXPOSE_01'},
+   set:{PLAN_A:1},go:'line1b'},
+  {t:'突っ込め',tag:'指示',eff:{'JIN.fear':20},go:'line1c'},
+  {t:'（沈黙）',tag:'沈黙',silent:1,timeout:1,eff:{'JIN.fear':15},go:'line1c'}
+ ]},
+
+ {n:'line1c'},
+ {noise:3},{fx:'shake'},
+ {c:'JIN',say:'うおおおっ——ぐっ、な、なんだこれ、身体が——'},
+ {par:{c:'JIN',fear:35}},
+ {if:{f:'GER_KNIFE_01'}, then:'line1c2', els:'line1c3'},
+ {n:'line1c2'},
+ {c:'GER',say:'馬鹿者! 引きずってでも戻す。……お前は電話に集中しろ!'},
+ {par:{c:'JIN',fear:-20}},
+ {go:'line2'},
+ {n:'line1c3'},
+ {life:['JIN','消失']},
+ {sys:'ジンパチ ── 消息不明'},
+ {go:'line2'},
+
+ {n:'line1b'},
+ {c:'GER',say:'記録している。父の名誉のために、一秒残らずだ。'},
+ {c:'JIN',say:'……くそ、動きてえ。でも待つ。あんたとの約束だからな。'},
+ {go:'line2'},
+
+ {n:'line2'},
+ {call:{who:'【2】ネオ／ヒュウ',c:'NEO',num:'▓▓▓-▓▓▓▓'}},
+ {if:{f:'NEO_HYU_01'}, then:'line2_ok', els:'line2_bad'},
+
+ {n:'line2_bad'},
+ {c:'NEO',say:'……私が独りで閉じる。それしかあるまい。'},
+ {c:'NEO',say:'貴様は、貴様の電話に集中しろ。それが貴様の剣だ。'},
+ {nar:'そして、通信は途絶えた。'},
+ {life:['NEO','消失']},
+ {if:{alive:'HYU'}, then:'line3', els:'line2_hyu'},
+ {n:'line2_hyu'},
+ {life:['HYU','死亡']},
+ {sys:'ヒュウ ── 渡岸にて消息途絶'},
+ {go:'line3'},
+
+ {n:'line2_ok'},
+ {c:'HYU',say:'座標、視えています。裂け目の根は——礼拝堂の、井戸の底です。'},
+ {c:'NEO',say:'よし。私が斬る。貴様は声で二人を繋げ。ずれれば、閉じ損ねる。'},
+ {ch:[
+  {t:'合図は私が出します。ヒュウの「見えた」で、ネオが斬る',tag:'連携',
+   eff:{'HYU.trust':10,'NEO.trust':10},set:{SYNC:1},go:'line2b'},
+  {t:'ヒュウ、無理だと思ったら言って。やめる勇気も勘定に入れる',tag:'配慮',
+   eff:{'HYU.trust':15},set:{SYNC:1},go:'line2b'}
+ ]},
+
+ {n:'line2b'},
+ {c:'HYU',say:'……ええ。あなたの声があれば、私はこの目を、灯だと思えます。'},
+ {life:['HYU','生存']},
+ {life:['NEO','生存']},
+ {go:'line3'},
+
+ {n:'line3'},
+ {clock:'03:31'},
+ {noise:3},
+ {nar:'午前三時三十一分。三本目の回線が、鳴りはじめる。'},
+ {ring:'old'},
+ {call:{who:'【3】ムニ(十年前)',c:'MUN',num:'0X-XXX-1994'}},
+ {c:'MUN',say:'……でんわのひと。でんわのひと、たすけて。'},
+ {c:'MUN',say:'けむりが、いっぱいなの。せんせいが、おきないの。'},
+ {fx:'flash'},{fx:'shake'},
+ {still:'s13'},
+ {nar:'十年前の八月十四日、午前三時三十三分。'},
+ {nar:'あの夜、この電話を、前任の相談員は切った。'},
+ {nar:'——今夜は、あなたが取っている。'},
+ {sys:'ここから先の一言一言が、十年前を書き換えます。'},
+ {sec:20},
+ {ch:[
+  {t:'ムニ! 落ち着いて。煙が出たら、どうするんだった?',tag:'教える',req:{and:[{f:'MUN_TEACH_01'},{nf:'FIN_LOW'}]},
+   eff:{'MUN.fear':-15,'MUN.trust':10},go:'fin_t1'},
+  {t:'廊下の奥、消火栓の箱! 中の鍵で裏の物置から外へ!',tag:'教える',req:{and:[{f:'MUN_TEACH_02'},{nf:'FIN_KEY'}]},
+   eff:{'MUN.fear':-15},go:'fin_t2'},
+  {t:'ムニ。私の声を思い出して。いま、ここにいるから',tag:'伴走',req:{and:[{f:'MUN_TEACH_03'},{nf:'FIN_VOICE'}]},
+   eff:{'MUN.fear':-25,'MUN.trust':15},go:'fin_t3'},
+  {t:'いま助けを呼ぶから、動かないで!',tag:'指示',eff:{'MUN.fear':10},go:'fin_wrong'},
+  {t:'（言葉が出ない）',tag:'沈黙',silent:1,timeout:1,eff:{'MUN.fear':25},go:'fin_wrong'}
+ ]},
+
+ {n:'fin_t1'},
+ {c:'MUN',say:'ひくく……はって……にげる!'},
+ {nar:'受話器の向こうで、小さな身体が床に伏せる音がした。'},
+ {set:{FIN_LOW:1}},
+ {go:'fin_loop'},
+
+ {n:'fin_t2'},
+ {c:'MUN',say:'しょうかせんのはこ! ある! かぎ、あったよ!'},
+ {set:{FIN_KEY:1}},
+ {go:'fin_loop'},
+
+ {n:'fin_t3'},
+ {c:'MUN',say:'……うん。きこえる。でんわのひとのこえ、きこえるよ。'},
+ {c:'MUN',say:'こわくない。ムニ、こわくないよ。'},
+ {set:{FIN_VOICE:1}},
+ {go:'fin_loop'},
+
+ {n:'fin_wrong'},
+ {c:'MUN',say:'……うん。うごかない。まってる。'},
+ {nar:'待たせてはいけない。あの夜、待った子どもは、朝を見なかった。'},
+ {par:{c:'MUN',fear:20}},
+ {go:'fin_loop'},
+
+ {n:'fin_loop'},
+ {if:{and:[{f:'FIN_LOW'},{f:'FIN_KEY'},{f:'FIN_VOICE'}]}, then:'fin_escape'},
+ {sec:16},
+ {ch:[
+  {t:'（さらに声をかける）',tag:'続ける',go:'line3_again'},
+  {t:'ジンパチとゲルに、跡地から呼びかけさせる',tag:'連携',req:{and:[{f:'JIN_RUSH_01'},{nf:'FIN_ALLY'}]},go:'fin_ally_call'},
+  {t:'ネオとヒュウに、裂け目を閉じさせる',tag:'連携',req:{f:'NEO_HYU_01'},go:'fin_close'},
+  {t:'（時間切れ）',tag:'沈黙',silent:1,timeout:1,go:'fin_close'}
+ ]},
+
+ {n:'line3_again'},
+ {sec:18},
+ {ch:[
+  {t:'煙が出たら、どうするんだった?',tag:'教える',req:{and:[{f:'MUN_TEACH_01'},{nf:'FIN_LOW'}]},go:'fin_t1'},
+  {t:'消火栓の箱の鍵! 裏の物置から外へ!',tag:'教える',req:{and:[{f:'MUN_TEACH_02'},{nf:'FIN_KEY'}]},go:'fin_t2'},
+  {t:'私の声を思い出して。ここにいる',tag:'伴走',req:{and:[{f:'MUN_TEACH_03'},{nf:'FIN_VOICE'}]},go:'fin_t3'},
+  {t:'ムニ、お兄ちゃんが外で待ってる。走って',tag:'励まし',req:{and:[{f:'LEN_REMEMBER'},{nf:'FIN_RUN'}]},
+   eff:{'MUN.fear':-20,'MUN.trust':10},go:'fin_bro'},
+  {t:'（もう言えることがない）',tag:'沈黙',silent:1,timeout:1,go:'fin_close'}
+ ]},
+
+ {n:'fin_bro'},
+ {c:'MUN',say:'……おにいちゃん、そとにいるの?'},
+ {c:'MUN',say:'……うん! いく!'},
+ {set:{FIN_RUN:1}},
+ {go:'fin_loop'},
+
+ {n:'fin_ally_call'},
+ {c:'JIN',say:'おい、聞こえるか! 井戸のとこだ! こっちだ、走ってこい!'},
+ {c:'GER',say:'……こっちだ。大丈夫だ、私たちがいる。'},
+ {nar:'十年の時間を跨いで、声が、声を追いかける。'},
+ {set:{FIN_ALLY:1}},
+ {go:'fin_loop'},
+
+ {n:'fin_close'},
+ {if:{f:'NEO_HYU_01'}, then:'fin_close_ok', els:'fin_close_bad'},
+
+ {n:'fin_close_ok'},
+ {c:'HYU',say:'見えました——いま!'},
+ {c:'NEO',say:'——承知した!'},
+ {fx:'flash'},{fx:'shake'},
+ {nar:'金属が空気を斬る音。低周波の唸りが、ぷつりと途切れる。'},
+ {noise:1},
+ {set:{RIFT_CLOSED:1}},
+ {go:'fin_judge'},
+
+ {n:'fin_close_bad'},
+ {noise:3},{fx:'shake'},
+ {nar:'裂け目は閉じない。唸りが、街全体を舐めるように広がっていく。'},
+ {go:'fin_judge'},
+
+ {n:'fin_judge'},
+ {if:{f:'MUN_SAVED'}, then:'fin_after'},
+ {go:'fin_lost'},
+
+ {n:'fin_lost'},
+ {noise:3},
+ {c:'MUN',say:'……でんわのひと。……ねむく、なってきちゃった。'},
+ {c:'MUN',say:'……あのね。おはなし、たのしかった。'},
+ {hang:'回線断（無音）',hangKind:'silent'},
+ {nar:'午前三時五十一分。十年前の朝が、来る。'},
+ {life:['MUN','死亡']},
+ {sys:'ムニ ── 十年前の火災により死亡'},
+ {nar:'あなたは受話器を握ったまま、動けなかった。'},
+ {nar:'——救えなかった。今回は。'},
+ {go:'fin_after'},
+
+ {n:'fin_escape'},
+ {fx:'flash'},
+ {nar:'煙の下を這う音。金属の擦れる音。扉が、軋みながら開く音。'},
+ {c:'MUN',say:'……でた! でんわのひと、そとにでたよ!'},
+ {c:'MUN',say:'……あ。おにいちゃん! おにいちゃんもいる!'},
+ {nar:'十年前の夜が、書き換わっていく。'},
+ {noise:1},
+ {set:{MUN_SAVED:1,STORY_TRUE_KEY:1}},
+ {tlfix:['10年前 8/14','灯守園の火災。園児全員が避難し、死者はゼロ。灰堂帰一を放火と傷害の容疑で逮捕。']},
+ {life:['MUN','生存']},
+ {go:'fin_close'},
+
+ {n:'fin_after'},
+ {clock:'04:41'},
+ {noise:0},
+ {nar:'朝が来る。霧が、ゆっくりと薄くなっていく。'},
+ {if:{and:[{f:'MUN_SAVED'},{f:'RIFT_CLOSED'},{f:'KAI_EXPOSE_01'},{f:'GER_KNIFE_01'},{f:'JIN_RUSH_01'}]},
+  then:'ep_true', els:'ep_normal'},
+
+ {n:'ep_normal'},
+ {nar:'事件は、それぞれの形で終わった。'},
+ {nar:'あなたは日誌を書き、受話器を拭き、次の夜のために席を立つ。'},
+ {end:'check'},
+
+ {n:'ep_true'},
+ {still:'s15'},
+ {nar:'朝焼けの相談室。'},
+ {nar:'電話が鳴る。知らない番号だ。'},
+ {sys:'着信 — 04:44<br>番号：080-XXXX-2214'},
+ {ch:[
+  {t:'受話器を取る',tag:'受電',go:'ep_true2'}
+ ]},
+
+ {n:'ep_true2'},
+ {call:{who:'???',c:'MUN',num:'080-XXXX-2214'}},
+ {c:'MUN',nm:'???',say:'……あの、もしもし。夜間相談の窓口で合ってますか。'},
+ {nar:'少年の声。十五歳くらいの、まだ少しだけ高い声。'},
+ {c:'MUN',nm:'???',say:'兄が、ここに世話になったって言うから。'},
+ {c:'MUN',nm:'???',say:'あ、名乗ってなかった。ムニっていいます。',slow:1},
+ {c:'MUN',nm:'ムニ(15)',say:'……はじめまして。',slow:1},
+ {c:'MUN',nm:'ムニ(15)',say:'でも、なんだか、なつかしい声だね。',slow:1},
+ {still:'s16'},
+ {nar:'受話器を持つ手が、震えている。'},
+ {nar:'十年分の朝が、いま、この部屋に届いた。'},
+ {if:{f:'SEC_CALL_01'}, then:'ep_secret', els:'ep_true_end'},
+
+ {n:'ep_true_end'},
+ {end:'check'},
+
+ {n:'ep_secret'},
+ {noise:2},
+ {nar:'——通話が終わったあと、録音装置が、ひとりでに回りはじめた。'},
+ {still:'s17'},
+ {c:'MRI',nm:'室井(録音)',say:'……七人目の子は、どこへ消えたんだ。'},
+ {c:'NEO',nm:'ネオ(録音)',say:'私が拾った。渡岸の岸辺で、黒電話を抱えて泣いていた。'},
+ {c:'NEO',nm:'ネオ(録音)',say:'あの子どもは、こちらでは歳を取らぬ。……いずれ、記憶をなくして戻るだろう。'},
+ {nar:'そして、テープの最後。'},
+ {c:'UNK',nm:'幼い声',say:'……もしもし。もしもーし。だれか、いますか。',slow:1},
+ {fx:'flash'},{fx:'shake'},
+ {nar:'——それは、あなた自身の声だった。'},
+ {tl:['10年前 8/14','七人目の園児が渡岸へ消失。時間差の後、記憶を失って帰還——現在の相談員となる。']},
+ {rel:['七人目の子','—— 同一人物','あなた']},
+ {end:'SECRET'}
+];
+
+</script>
+<script>
+/* ============================================================
+   ミッドナイトライン ― エンジン
+   フラグ / パラメータ分岐 / 録音再生 / 資料 / 周回 / エンディング判定
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+const CHARS = {
+  LEN:{name:'レニィ',sub:'男子学生・青い髪',col:'#7fa8ff'},
+  HYU:{name:'ヒュウ',sub:'男子学生・緑の髪',col:'#7fd3a0'},
+  JIN:{name:'ジンパチ',sub:'男子学生・茶髪',col:'#f0a05a'},
+  MUN:{name:'ムニ',sub:'5歳・青い髪',col:'#9ec9ff'},
+  GER:{name:'ゲル',sub:'女性・紫の髪',col:'#c08adf'},
+  NEO:{name:'ネオ',sub:'???',col:'#f0d878'},
+  KAI:{name:'灰堂帰一',sub:'医師',col:'#a0a8b4'},
+  MRI:{name:'室井',sub:'前任相談員',col:'#a0a8b4'},
+  CAN:{name:'カナタ',sub:'ジンパチの親友',col:'#a0a8b4'},
+  UNK:{name:'???',sub:'発信者不明',col:'#c4443a'},
+  ME :{name:'あなた',sub:'夜間相談員',col:'#7fb6c9'}
+};
+const TRACKED = ['LEN','HYU','JIN','MUN','GER','NEO'];
+
+/* ---------- 状態 ---------- */
+let S, G, script = [], labels = {}, pc = 0, running = false, typing = null, tmr = null;
+
+function newChar(){ return {trust:20,doubt:0,fear:0,stress:0,state:'安定',life:'生存',known:[]}; }
+function newState(loopCarry){
+  const c = {}; TRACKED.forEach(k => c[k] = newChar());
+  return {
+    loop: loopCarry ? loopCarry.loops + 1 : 1,
+    day:1, chapter:'pro', chapTitle:'序章 もしもし、きこえますか',
+    clock:22*60, flags:{}, chars:c, noise:0,
+    memo:[], evd:[], tl:[
+      {d:'10年前 8/14',t:'児童養護施設「灯守園」で火災。園児1名が死亡、職員1名が放火犯として服役。'},
+      {d:'　　　　　　',t:'（　　　　　　　　　　　　　　　）'},
+      {d:'2週間前',t:'市内で若者の失踪が相次ぐ。'}
+    ],
+    rel:[], vm:[], hist:[], recs:[], stills:[], cur:null, callStart:null
+  };
+}
+const F  = k => !!S.flags[k];
+const SET= (k,v=1) => { S.flags[k]=v; };
+const CNT= k => S.flags[k]|0;
+
+/* ---------- 保存 ---------- */
+async function saveAll(){
+  try{
+    await window.storage.set('ml:save', JSON.stringify(S));
+    await window.storage.set('ml:global', JSON.stringify(G));
+  }catch(e){ mem.save = JSON.stringify(S); mem.global = JSON.stringify(G); }
+}
+const mem = {};
+async function loadKey(k){
+  try{ const r = await window.storage.get('ml:'+k); return r ? JSON.parse(r.value) : null; }
+  catch(e){ return mem[k] ? JSON.parse(mem[k]) : null; }
+}
+
+/* ---------- 音響(WebAudio・素材不要) ---------- */
+const AU = {
+  ctx:null, on:true, amb:null, ambGain:null,
+  init(){ if(!this.ctx){ try{ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } },
+  g(v){ const g = this.ctx.createGain(); g.gain.value = v; g.connect(this.ctx.destination); return g; },
+  beep(f,d,v=.05,type='sine'){ if(!this.on) return; this.init(); if(!this.ctx) return;
+    const o = this.ctx.createOscillator(), g = this.g(0); o.type = type; o.frequency.value = f;
+    o.connect(g); o.start();
+    g.gain.linearRampToValueAtTime(v, this.ctx.currentTime+.01);
+    g.gain.exponentialRampToValueAtTime(.0001, this.ctx.currentTime+d);
+    o.stop(this.ctx.currentTime+d+.02);
+  },
+  ring(kind){ if(!this.on) return; this.init(); if(!this.ctx) return;
+    if(kind==='old'){ // 十年前の黒電話
+      for(let i=0;i<7;i++) setTimeout(()=>this.beep(1050,.06,.05,'triangle'),i*90);
+    } else if(kind==='broken'){ // 文字化け着信
+      for(let i=0;i<6;i++) setTimeout(()=>this.beep(300+Math.random()*900,.09,.045,'square'),i*70);
+    } else { this.beep(880,.18,.045,'sine'); setTimeout(()=>this.beep(880,.18,.045,'sine'),240); }
+  },
+  hang(kind){ if(!this.on) return; this.init(); if(!this.ctx) return;
+    if(kind==='silent') return;
+    if(kind==='cut'){ this.beep(180,.05,.06,'square'); return; }
+    this.beep(400,.5,.035,'sine');
+  },
+  noise(sec=.5,v=.05){ if(!this.on) return; this.init(); if(!this.ctx) return;
+    const b = this.ctx.createBuffer(1, this.ctx.sampleRate*sec, this.ctx.sampleRate), d = b.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1)*.6;
+    const s = this.ctx.createBufferSource(); s.buffer = b;
+    const f = this.ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1200;
+    const g = this.g(v); s.connect(f); f.connect(g); s.start();
+  },
+  ambient(level){ // 章ごとの空気(低周波ドローン)
+    if(!this.on) return; this.init(); if(!this.ctx) return;
+    if(this.amb){ try{ this.amb.forEach(o=>o.stop()); }catch(e){} this.amb=null; }
+    const base = [55,58.3,73.4,49,41.2,65.4,87][level] || 55;
+    const g = this.g(.012); this.ambGain = g; const list = [];
+    [1,1.5,2.02].forEach((m,i)=>{ const o = this.ctx.createOscillator();
+      o.type = i===2?'triangle':'sine'; o.frequency.value = base*m; o.connect(g); o.start(); list.push(o); });
+    this.amb = list;
+  },
+  stopAmb(){ if(this.amb){ try{ this.amb.forEach(o=>o.stop()); }catch(e){} this.amb=null; } },
+  click(){ this.beep(1400,.03,.02,'square'); }
+};
+
+/* ---------- 画面ヘルパ ---------- */
+function clockStr(m){ m = ((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+function refreshHead(){
+  $('#hDay').textContent = 'DAY '+String(S.day).padStart(2,'0');
+  $('#hClock').textContent = clockStr(S.clock);
+  $('#hChap').textContent = S.chapTitle.split(' ')[0] + (S.loop>1?'　周回'+S.loop:'');
+  const nm = ['回線良好','微弱な雑音','二重音声を検知','境界接近 — 回線不安定'][S.noise];
+  $('#hNoiseTx').textContent = nm;
+  $('#hLamp').className = 'lamp' + (S.noise>=2?' on':'');
+  document.body.className = S.noise?('n'+S.noise):'';
+}
+function setNoise(n){ S.noise = n; refreshHead(); if(n>=2) AU.noise(.4,.03); }
+function fx(kind){
+  if(kind==='shake'){ document.body.classList.add('shake'); setTimeout(()=>document.body.classList.remove('shake'),520); }
+  if(kind==='flash'){ const f=$('#flash'); f.style.opacity=.85; setTimeout(()=>f.style.opacity=0,110); }
+}
+
+/* 波形(署名演出:声の状態で揺れる) */
+const wv = {cv:null,ct:null,amp:0,col:'#f0c674',t:0};
+function waveInit(){ wv.cv = $('#wave'); wv.ct = wv.cv.getContext('2d'); loopWave(); }
+function loopWave(){
+  const c = wv.ct, W = wv.cv.width, H = wv.cv.height; wv.t += .05;
+  c.clearRect(0,0,W,H);
+  const n = S ? S.noise : 0;
+  c.strokeStyle = wv.col; c.lineWidth = 1.2; c.globalAlpha = .85; c.beginPath();
+  for(let x=0;x<W;x+=2){
+    const base = Math.sin(x*.02 + wv.t)*Math.sin(x*.005 - wv.t*.6);
+    const noi = (Math.random()-.5)*n*4;
+    const y = H/2 + base*wv.amp*H*.38 + noi;
+    x===0 ? c.moveTo(x,y) : c.lineTo(x,y);
+  }
+  c.stroke();
+  if(n>=2){ c.globalAlpha=.35; c.strokeStyle='#c4443a'; c.beginPath();
+    for(let x=0;x<W;x+=3){ const y = H/2 + Math.sin(x*.05 - wv.t*1.7)*wv.amp*H*.2 + (Math.random()-.5)*n*3;
+      x===0?c.moveTo(x,y):c.lineTo(x,y); } c.stroke(); }
+  c.globalAlpha = 1;
+  wv.amp *= .93;
+  requestAnimationFrame(loopWave);
+}
+
+/* ---------- テキスト表示 ---------- */
+function pushLine(html, cls){
+  const d = document.createElement('div'); d.className = 'tx '+(cls||''); d.innerHTML = html;
+  $('#text').appendChild(d);
+  const w = $('#textwrap'); w.scrollTop = w.scrollHeight;
+  return d;
+}
+function typeInto(el, text, speed, done){
+  let i = 0; el._full = (el.innerHTML||'') + text; el._done = done; const cur = document.createElement('span'); cur.className='cursor';
+  const body = document.createElement('span'); el.appendChild(body); el.appendChild(cur);
+  clearInterval(typing);
+  typing = setInterval(()=>{
+    if(i >= text.length){ clearInterval(typing); typing=null; cur.remove(); done && done(); return; }
+    body.textContent += text[i++];
+    wv.amp = Math.min(1, wv.amp + .25);
+    if(i%3===0) $('#textwrap').scrollTop = $('#textwrap').scrollHeight;
+  }, speed);
+}
+function skipType(){
+  if(typing){
+    clearInterval(typing); typing = null;
+    const el = $('#text').lastChild;
+    if(el && el._full) el.innerHTML = el._full;
+    if(el && el._done){ const d = el._done; el._done = null; running = false; d(); }
+    return true;
+  }
+  return false;
+}
+
+/* ---------- パラメータ ---------- */
+function applyPar(p){
+  const c = S.chars[p.c]; if(!c) return;
+  ['trust','doubt','fear','stress'].forEach(k=>{ if(p[k]!=null) c[k] = Math.max(0,Math.min(100,c[k]+p[k])); });
+  const f = c.fear, st = c.stress;
+  c.state = (c.life!=='生存') ? c.life : (f>75||st>85 ? '危機' : f>50||st>60 ? '混乱' : f>25||st>35 ? '動揺' : '安定');
+  renderAside();
+}
+function renderAside(){
+  const a = $('#aside'); let h = '<h4>相談者の状態</h4>';
+  TRACKED.forEach(k=>{
+    const c = S.chars[k], m = CHARS[k];
+    if(!S.flags['MET_'+k]) return;
+    const bar=(v,col)=>`<div class="bar"><i style="width:${v}%;background:${col}"></i></div>`;
+    h += `<div class="pc"><span class="st ${c.state}">${c.life==='生存'?c.state:c.life}</span>
+      <div class="n" style="color:${m.col}">${m.name}</div>
+      <div class="lb">信頼 ${c.trust}</div>${bar(c.trust,'#f0c674')}
+      <div class="lb">疑念 ${c.doubt}</div>${bar(c.doubt,'#8f7fc9')}
+      <div class="lb">恐怖 ${c.fear}</div>${bar(c.fear,'#c4443a')}
+      <div class="lb">ストレス ${c.stress}</div>${bar(c.stress,'#5f8fa8')}</div>`;
+  });
+  if(h === '<h4>相談者の状態</h4>') h += '<p class="empty">まだ誰の声も聞いていない。</p>';
+  a.innerHTML = h;
+}
+
+/* ---------- 資料パネル ---------- */
+const PANELS = [
+  ['memo','相談メモ'],['rel','人物相関図'],['tl','事件年表'],['evd','証拠一覧'],
+  ['rec','録音再生'],['hist','通話履歴'],['vm','留守番電話'],['prof','相談者プロフィール'],
+  ['still','スチル'],['flag','フラグ確認'],['sys','セーブ / 周回']
+];
+function renderNav(){
+  let h = '<h4>相談ファイル</h4>';
+  PANELS.forEach(([k,t])=>{
+    let badge = '';
+    if(k==='vm' && S.vm.some(v=>!v.played)) badge = '<span class="badge">●</span>';
+    if(k==='rec'&& S.recs.some(r=>!r.played)) badge = '<span class="badge">●</span>';
+    h += `<button data-p="${k}">${t}${badge}</button>`;
+  });
+  $('#nav').innerHTML = h;
+  $$('#nav button').forEach(b=>b.onclick=()=>{ AU.click(); openPanel(b.dataset.p); });
+}
+function openPanel(k){
+  const t = (PANELS.find(p=>p[0]===k)||[])[1] || '';
+  $('#pTitle').textContent = t; $('#pBody').innerHTML = PANEL_HTML[k]();
+  $('#panel').classList.add('on');
+  $('#nav').classList.remove('on'); $('#aside').classList.remove('on');
+  $$('#mobtabs button').forEach(x=>x.classList.toggle('act', x.dataset.m==='call'));
+  bindPanel(k);
+}
+const PANEL_HTML = {
+  memo: () => S.memo.length ? S.memo.map(m=>`<div class="card"><div class="d">DAY ${m.d}</div><h5>${m.t}</h5><p>${m.x}</p></div>`).join('')
+        : '<p class="empty">まだ書き留めたことはない。<br>通話中の言葉は、聞き逃せば二度と戻らない。</p>',
+  rel:  () => S.rel.length ? '<div class="rel">'+S.rel.map(r=>`<div class="rel ${r.dot?'dot':''}">${r.dot?'┈┈':'──'} <b>${r.a}</b> ${r.t} <b>${r.b}</b></div>`).join('')+'</div>'
+        : '<p class="empty">線はまだ一本も引かれていない。</p>',
+  tl:   () => '<table>'+S.tl.map(e=>`<tr><td class="t">${e.d}</td><td>${e.t}</td></tr>`).join('')+'</table>',
+  evd:  () => S.evd.length ? S.evd.map(e=>`<div class="card evd"><h5>${e.t}</h5><p>${e.x}</p></div>`).join('')
+        : '<p class="empty">証拠はまだない。声だけが唯一の物証だ。</p>',
+  rec:  () => S.recs.length ? S.recs.map((r,i)=>`<div class="card ${r.opened?'hidn':''}"><div class="d">DAY ${r.day} ／ ${r.ti}</div>
+        <p>${r.opened&&r.hid ? r.tx+'<br><span style="color:#c9a0e0">〔0.5倍速〕'+r.hid+'</span>' : r.tx}</p>
+        <div class="tools"><button data-rec="${i}" data-md="play">再生</button>
+        ${r.hid?`<button data-rec="${i}" data-md="slow">0.5倍速で聴く</button><button data-rec="${i}" data-md="rev">逆再生</button>`:''}</div></div>`).join('')
+        : '<p class="empty">録音はまだない。<br>通話はすべて自動で記録される。</p>',
+  hist: () => S.hist.length ? '<table>'+S.hist.map(e=>`<tr><td class="t">D${e.d} ${e.c}</td><td>${e.w}<br><span style="color:#8792a2;font-size:11px">${e.len} ／ ${e.r}</span></td></tr>`).join('')+'</table>'
+        : '<p class="empty">履歴なし。</p>',
+  vm:   () => S.vm.length ? S.vm.map((v,i)=>`<div class="card"><div class="d">DAY ${v.d} ${v.c}</div><h5>${v.w}</h5>
+        <p>${v.played ? v.x : '未再生'}</p><div class="tools"><button data-vm="${i}">再生する</button></div></div>`).join('')
+        : '<p class="empty">新しいメッセージはありません。</p>',
+  prof: () => TRACKED.filter(k=>F('MET_'+k)).map(k=>{
+        const c = S.chars[k], m = CHARS[k];
+        return `<div class="card"><h5 style="color:${m.col}">${m.name}<span style="color:#8792a2;font-size:11px">　${m.sub}</span></h5>
+        <p>${(c.known||[]).map(s=>'・'+s).join('<br>')||'・情報なし'}</p>
+        <p style="margin-top:6px;color:#8792a2;font-size:11px">状態：${c.life==='生存'?c.state:c.life}／信頼 ${c.trust}／疑念 ${c.doubt}</p></div>`;
+        }).join('') || '<p class="empty">まだ誰のことも知らない。</p>',
+  still:() => STILLS.map(s=>{
+        const got = S.stills.includes(s.id) || (G.stills||[]).includes(s.id);
+        return `<div class="still ${got?'':'lockd'}" ${got?`data-still="${s.id}"`:''}>
+          <div class="im" style="background:${s.bg}"></div>
+          <div class="cap"><b>${got?s.t:'??????'}</b>${got?s.c:'未取得 — 取得条件：'+s.cond}</div></div>`;
+        }).join(''),
+  flag: () => {
+        const ks = Object.keys(S.flags);
+        return `<p class="empty" style="margin-bottom:12px">立っているフラグ ${ks.length} 件／周回 ${S.loop}</p>` +
+          '<div class="rel">'+ks.map(k=>`◆ ${k}${S.flags[k]!==1?' = '+S.flags[k]:''}`).join('<br>')+'</div>';
+        },
+  sys:  () => `<div class="card"><h5>記録</h5><p>この端末は自動で記録されています。手動保存もできます。</p>
+        <div class="tools"><button data-sys="save">いま保存する</button><button data-sys="title">タイトルへ戻る</button></div></div>
+        <div class="card"><h5>周回 ${S.loop}</h5><p>録音・メモ・証拠・相関図・年表・スチルは次の周回へ引き継がれます。信頼度はリセットされます——もう一度、はじめから話を聞くために。</p>
+        <p style="margin-top:8px">到達済みエンディング：${(G.endings||[]).join('・')||'なし'}</p></div>`
+};
+function bindPanel(k){
+  $$('#pBody [data-rec]').forEach(b=>b.onclick=()=>playRec(+b.dataset.rec, b.dataset.md));
+  $$('#pBody [data-vm]').forEach(b=>b.onclick=()=>{ const v=S.vm[+b.dataset.vm]; v.played=1; AU.noise(.3,.03); openPanel('vm'); renderNav(); });
+  $$('#pBody [data-still]').forEach(b=>b.onclick=()=>showStill(b.dataset.still));
+  $$('#pBody [data-sys]').forEach(b=>b.onclick=()=>{ if(b.dataset.sys==='save'){ saveAll(); b.textContent='保存しました'; } else location.reload(); });
+}
+function playRec(i, mode){
+  const r = S.recs[i]; r.played = 1;
+  AU.noise(.5,.04);
+  if(mode!=='play' && r.hid){
+    if(!r.opened){
+      r.opened = 1;
+      if(r.flag){ SET(r.flag); }
+      if(!(G.recs||[]).includes(r.id)){ G.recs = G.recs||[]; G.recs.push(r.id); }
+      fx('shake'); AU.beep(80,1.2,.05,'sawtooth');
+      toast('録音の底から、別の声が浮かび上がった。');
+    }
+  }
+  openPanel('rec'); renderNav(); saveAll();
+}
+function toast(t){
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:80;background:#141d29;border:1px solid #f0c674;color:#f0c674;padding:10px 18px;border-radius:4px;font-size:12.5px;letter-spacing:.1em';
+  d.textContent = t; document.body.appendChild(d);
+  setTimeout(()=>{ d.style.transition='opacity .8s'; d.style.opacity=0; setTimeout(()=>d.remove(),800); }, 2200);
+}
+function showStill(id, cont){
+  const s = STILLS.find(x=>x.id===id); if(!s){ cont && cont(); return; }
+  $('#svIm').style.background = s.bg;
+  $('#svCp').innerHTML = `<b>${s.t}</b>${s.c}`;
+  $('#stillview').classList.add('on');
+  $('#stillview').onclick = ()=>{ $('#stillview').classList.remove('on'); cont && cont(); };
+}
+function unlockStill(id, cont){
+  if(!S.stills.includes(id)) S.stills.push(id);
+  G.stills = G.stills||[]; if(!G.stills.includes(id)) G.stills.push(id);
+  AU.beep(520,.5,.03,'sine');
+  showStill(id, cont);
+}
+
+/* ---------- 条件評価 ---------- */
+function cond(c){
+  if(!c) return true;
+  if(c.and) return c.and.every(cond);
+  if(c.or)  return c.or.some(cond);
+  if(c.f)   return F(c.f);
+  if(c.nf)  return !F(c.nf);
+  if(c.cnt) return CNT(c.cnt[0]) >= c.cnt[1];
+  if(c.tr)  return S.chars[c.tr[0]].trust >= c.tr[1];
+  if(c.dbt) return S.chars[c.dbt[0]].doubt >= c.dbt[1];
+  if(c.alive) return S.chars[c.alive].life === '生存';
+  if(c.loop)  return S.loop >= c.loop;
+  return true;
+}
+
+/* ---------- 実行 ---------- */
+function loadChapter(id, startLabel){
+  script = SCENARIO[id]; labels = {};
+  script.forEach((n,i)=>{ if(n.n) labels[n.n] = i; });
+  S.chapter = id;
+  pc = startLabel!=null ? labels[startLabel] : 0;
+}
+function jump(l){ if(labels[l]==null){ console.warn('no label',l); return; } pc = labels[l]; }
+
+function step(){
+  if(running) return;
+  if(pc >= script.length){ return; }
+  const nd = script[pc++];
+  exec(nd);
+}
+function advance(){ // ▼クリック
+  if(skipType()){ $('#next').style.display='block'; return; }
+  $('#next').style.display='none';
+  step();
+}
+function exec(nd){
+  // --- 表示系 ---
+  if(nd.say!=null){
+    const m = CHARS[nd.c] || CHARS.UNK;
+    S.clock += 1; refreshHead();
+    wv.col = m.col;
+    const el = pushLine(`<span class="nm" style="color:${m.col}">${nd.nm||m.name}</span>`, nd.w?'wsp':'');
+    running = true;
+    typeInto(el, nd.say, nd.slow?46:22, ()=>{ running=false; $('#next').style.display='block'; });
+    if(nd.se) AU.beep(...({}[nd.se]||[600,.06,.02,'sine']));
+    return;
+  }
+  if(nd.me!=null){
+    S.clock += 1; refreshHead(); wv.col = CHARS.ME.col;
+    const el = pushLine(`<span class="nm">あなた</span>`, 'me');
+    running = true; typeInto(el, nd.me, 20, ()=>{ running=false; $('#next').style.display='block'; });
+    return;
+  }
+  if(nd.nar!=null){
+    wv.col = '#5f6b7c';
+    const el = pushLine('', 'nar'); running = true;
+    typeInto(el, nd.nar, 18, ()=>{ running=false; $('#next').style.display='block'; });
+    return;
+  }
+  if(nd.sys!=null){
+    pushLine(nd.sys, 'sys'); AU.beep(1200,.04,.02,'square'); $('#next').style.display='block'; return;
+  }
+  // --- 演出系(即時・自動で次へ) ---
+  if(nd.call){ startCall(nd.call); }
+  if(nd.hang!=null){ endCall(nd.hang, nd.hangKind); }
+  if(nd.ring){ AU.ring(nd.ring); }
+  if(nd.noise!=null) setNoise(nd.noise);
+  if(nd.fx) fx(nd.fx);
+  if(nd.amb!=null) AU.ambient(nd.amb);
+  if(nd.clock){ const [h,m] = nd.clock.split(':').map(Number); S.clock = h*60+m; refreshHead(); }
+  if(nd.day){ S.day = nd.day; S.clock = 22*60; refreshHead(); }
+  if(nd.set){ Object.entries(nd.set).forEach(([k,v])=>SET(k,v)); }
+  if(nd.inc){ Object.entries(nd.inc).forEach(([k,v])=>SET(k, CNT(k)+v)); }
+  if(nd.par){ applyPar(nd.par); }
+  if(nd.meet){ SET('MET_'+nd.meet); S.chars[nd.meet].known = nd.known||[]; renderAside(); }
+  if(nd.know){ const c = S.chars[nd.know[0]]; if(!c.known.includes(nd.know[1])) c.known.push(nd.know[1]); }
+  if(nd.life){ S.chars[nd.life[0]].life = nd.life[1]; applyPar({c:nd.life[0]}); }
+  if(nd.memo){ S.memo.push({d:S.day, t:nd.memo[0], x:nd.memo[1]}); toast('相談メモに記録：'+nd.memo[0]); }
+  if(nd.evd){ S.evd.push({t:nd.evd[0], x:nd.evd[1]}); toast('証拠を入手：'+nd.evd[0]); }
+  if(nd.tl){ S.tl.push({d:nd.tl[0], t:nd.tl[1]}); }
+  if(nd.tlfix){ const e = S.tl[1]; e.d = nd.tlfix[0]; e.t = nd.tlfix[1]; toast('事件年表の空白が埋まった。'); }
+  if(nd.rel){ S.rel.push({a:nd.rel[0], t:nd.rel[1], b:nd.rel[2], dot:nd.rel[3]}); }
+  if(nd.vm){ S.vm.push({d:S.day, c:clockStr(S.clock), w:nd.vm[0], x:nd.vm[1]}); renderNav(); toast('留守番電話に1件のメッセージ'); }
+  if(nd.rec){ S.recs.push({id:nd.rec.id, day:S.day, ti:nd.rec.ti, tx:nd.rec.tx, hid:nd.rec.hid, flag:nd.rec.flag,
+      opened:(G.recs||[]).includes(nd.rec.id)?1:0}); renderNav(); toast('通話を録音しました'); }
+  if(nd.still){ saveAll(); unlockStill(nd.still, step); return; } // スチルを閉じると再開
+  if(nd.chapTitle){ S.chapTitle = nd.chapTitle; }
+  if(nd.card){ showChapCard(nd.card); return; }
+  if(nd.wait){ setTimeout(step, nd.wait); return; }
+  // --- 制御系 ---
+  if(nd.ch){ showChoices(nd); return; }
+  if(nd.go){ jump(nd.go); }
+  if(nd.if){ if(cond(nd.if)) jump(nd.go2 || nd.then); else if(nd.els) jump(nd.els); }
+  if(nd.chap){ saveAll(); loadChapter(nd.chap); $('#text').innerHTML=''; step(); return; }
+  if(nd.end){ return endGame(nd.end); }
+  if(nd.clear){ $('#text').innerHTML=''; }
+  step();
+}
+
+/* 通話 */
+function startCall(c){
+  S.cur = c; S.callStart = S.clock;
+  $('#cWho').textContent = c.who;
+  $('#cWho').style.color = (CHARS[c.c]||CHARS.UNK).col;
+  $('#cMeta').textContent = (c.num||'番号非通知') + ' ／ 通話中';
+  AU.beep(700,.08,.03,'sine');
+}
+function endCall(reason, kind){
+  if(S.cur){
+    const len = Math.max(1, S.clock - S.callStart);
+    S.hist.push({d:S.day, c:clockStr(S.callStart), w:S.cur.who, len:len+'分', r:reason||'通話終了'});
+  }
+  AU.hang(kind || 'normal');
+  $('#cWho').textContent = 'みおはらライン';
+  $('#cWho').style.color = '';
+  $('#cMeta').textContent = '待機中 — 着信なし';
+  S.cur = null;
+}
+
+/* 選択肢 */
+function showChoices(nd){
+  const box = $('#choices'); box.innerHTML = ''; $('#next').style.display='none';
+  const list = nd.ch.filter(o => !o.hide || cond(o.hide));
+  list.forEach(o=>{
+    const ok = cond(o.req);
+    const b = document.createElement('button');
+    b.className = 'cbtn' + (o.silent?' silent':'') + (ok?'':' lock') + (o.hide?' hid':'');
+    b.innerHTML = (o.tag?`<span class="tag">${o.tag}</span>`:'') + o.t + (ok?'':' <span class="tag">— まだ言葉が見つからない</span>');
+    b.onclick = ()=>{ if(!ok) return; AU.click(); pick(o, nd); };
+    box.appendChild(b);
+  });
+  if(nd.sec) startTimer(nd.sec, ()=>{ // 制限時間切れ = 沈黙してしまった
+    const to = nd.ch.find(o=>o.timeout) || list[list.length-1];
+    pick(to, nd, true);
+  });
+}
+function startTimer(sec, cb){
+  const bar = $('#timer'); let t = sec*1000; const t0 = Date.now();
+  bar.style.transform = 'scaleX(1)';
+  clearInterval(tmr);
+  tmr = setInterval(()=>{
+    const p = 1 - (Date.now()-t0)/t;
+    bar.style.transform = 'scaleX('+Math.max(0,p)+')';
+    if(p<=0){ clearInterval(tmr); bar.style.transform='scaleX(0)'; cb(); }
+  }, 50);
+}
+function pick(o, nd, timedout){
+  clearInterval(tmr); $('#timer').style.transform='scaleX(0)';
+  $('#choices').innerHTML = '';
+  if(o.say!==false && o.t) pushLine(`<span class="nm">あなた</span>${timedout?'（沈黙した）':(o.line||o.t)}`, 'me');
+  S.clock += o.cost || 2;
+  if(o.eff) Object.entries(o.eff).forEach(([k,v])=>{
+    const [c,p] = k.split('.'); applyPar({c, [p]: v});
+  });
+  if(o.set) Object.entries(o.set).forEach(([k,v])=>SET(k,v));
+  if(o.inc) Object.entries(o.inc).forEach(([k,v])=>SET(k, CNT(k)+v));
+  if(o.memo) S.memo.push({d:S.day,t:o.memo[0],x:o.memo[1]});
+  refreshHead(); renderAside();
+  if(o.go){ jump(o.go); }
+  saveAll();
+  step();
+}
+
+/* 章タイトルカード */
+function showChapCard(c){
+  const d = document.createElement('div'); d.className='chapcard';
+  d.innerHTML = `<div class="no">${c[0]}</div><div class="ti">${c[1]}</div><div class="dt">${c[2]||''}</div>`;
+  document.body.appendChild(d);
+  AU.ambient(c[3]||0);
+  setTimeout(()=>{ d.style.transition='opacity 1s'; d.style.opacity=0;
+    setTimeout(()=>{ d.remove(); step(); }, 1000); }, 2400);
+}
+
+/* ---------- エンディング判定 ---------- */
+function judge(){
+  const alive = k => S.chars[k].life === '生存';
+  const现 = ['LEN','JIN','GER','HYU','NEO'].every(alive);
+  const goodBase = F('KAI_EXPOSE_01') && F('GER_KNIFE_01') && F('JIN_RUSH_01') && alive('LEN');
+  const trueCond = goodBase && allAlive
+    && F('MUN_TEACH_01') && F('MUN_TEACH_02') && F('MUN_TEACH_03')
+    && CNT('MUN_CUT_XX') < 2 && F('EVD_TAPE_01') && F('EVD_WAVE_01') && F('NEO_HYU_01') && F('STORY_TRUE_KEY');
+  if(trueCond && F('SEC_CALL_01') && (G.recs||[]).length>=5 && (G.endings||[]).includes('TRUE')) return 'SECRET';
+  if(trueCond) return 'TRUE';
+  if(goodBase && allAlive) return 'GOOD';
+  if(['LEN','JIN','GER'].filter(alive).length >= 2) return 'NORMAL';
+  return 'BAD';
+}
+function endGame(tag){
+  const id = tag === 'check' ? judge() : tag;
+  AU.stopAmb();
+  G.endings = G.endings||[]; if(!G.endings.includes(id)) G.endings.push(id);
+  G.memo = S.memo.slice(); G.evd = S.evd.slice(); G.rel = S.rel.slice(); G.tl = S.tl.slice();
+  G.loops = (G.loops||0) + 1;
+  G.recs = G.recs||[]; G.stills = G.stills||[];
+  saveAll();
+  const e = ENDINGS[id];
+  const ov = document.createElement('div'); ov.className='ov fade';
+  ov.innerHTML = `<div class="endname">${e.name}</div>
+    <div class="sub" style="margin:18px 0 26px">${id} END</div>
+    <p>${e.text}</p>
+    <div style="margin-top:34px">
+      <button class="mbtn" id="eNext">次の周回へ<small>録音・メモ・証拠・年表・スチルを引き継ぐ</small></button>
+      <button class="mbtn" id="eTitle">タイトルへ</button></div>`;
+  document.body.appendChild(ov);
+  $('#eNext').onclick = ()=> startGame(true);
+  $('#eTitle').onclick = ()=> location.reload();
+}
+
+/* ---------- 起動 ---------- */
+async function boot(){
+  G = await loadKey('global') || {loops:0, endings:[], recs:[], stills:[]};
+  const sv = await loadKey('save');
+  const ov = $('#title');
+  ov.innerHTML = `<h1><small>MIDNIGHT LINE</small>ミッドナイトライン</h1>
+    <div class="sub">澪原市いのちの電話</div>
+    <button class="mbtn" id="mNew">夜勤に入る<small>${G.loops?('周回 '+(G.loops+1)+'／引き継ぎあり'):'DAY 01 22:00 から'}</small></button>
+    ${sv?'<button class="mbtn" id="mCont">続きから<small>DAY '+sv.day+' ／ '+sv.chapTitle.split(' ')[0]+'</small></button>':''}
+    <button class="mbtn" id="mInfo">この電話について<small>操作と、この仕事の心得</small></button>
+    <div class="sub" style="margin-top:30px;font-size:11px">到達エンディング ${(G.endings||[]).length} / 5　　発見した録音 ${(G.recs||[]).length}</div>`;
+  $('#mNew').onclick = ()=> startGame(G.loops>0);
+  $('#mInfo').onclick = ()=> showInfo();
+  if(sv) $('#mCont').onclick = ()=>{ S = sv; resume(); };
+  waveInit();
+  document.addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter'){ if($('#choices').children.length===0) advance(); } });
+  $('#textwrap').onclick = ()=>{ if($('#choices').children.length===0) advance(); };
+  $('#next').onclick = advance;
+  $('#pClose').onclick = ()=> $('#panel').classList.remove('on');
+  $('#bMenu').onclick = ()=> openPanel('sys');
+  $('#bSound').onclick = ()=>{ AU.on = !AU.on; $('#bSound').textContent = AU.on?'♪ ON':'♪ OFF';
+    if(!AU.on) AU.stopAmb(); else AU.ambient(0); };
+  $$('#mobtabs button').forEach(b=>b.onclick=()=>{
+    $$('#mobtabs button').forEach(x=>x.classList.remove('act')); b.classList.add('act');
+    $('#nav').classList.toggle('on', b.dataset.m==='nav');
+    $('#aside').classList.toggle('on', b.dataset.m==='aside');
+  });
+}
+function showInfo(){
+  const ov = document.createElement('div'); ov.className='ov fade';
+  ov.innerHTML = `<h1 style="font-size:24px;letter-spacing:.2em">この電話について</h1>
+  <p style="text-align:left">あなたは澪原市の夜間電話相談員です。現場へは行けません。声、息づかい、物音、沈黙、雑音、そして話の矛盾——受話器から届くものだけが手がかりです。<br><br>
+  ・画面をタップ／スペースキーで進みます。<br>
+  ・選択肢には〈傾聴〉〈確認〉〈指摘〉〈沈黙〉などの札があります。沈黙もまた答えです。<br>
+  ・通話はすべて自動録音されます。<b style="color:#f0c674;font-weight:400">0.5倍速や逆再生で聴き直すと、その時は聞こえなかった声が入っていることがあります。</b><br>
+  ・信頼・疑念・恐怖・ストレスは相手ごとに変動し、話してもらえる内容そのものが変わります。<br>
+  ・一周目で救えるとは限りません。録音とメモは次の周回へ引き継がれます。<br><br>
+  <span style="color:#8792a2">切ってしまった電話は、二度と同じようには鳴りません。</span></p>
+  <button class="mbtn" style="margin-top:26px" onclick="this.parentNode.remove()">戻る</button>`;
+  document.body.appendChild(ov);
+}
+function startGame(carry){
+  S = newState(carry ? G : null);
+  if(carry){
+    S.loop = (G.loops||0) + 1;
+    (G.memo||[]).forEach(m=>S.memo.push(m));
+    (G.evd||[]).forEach(e=>S.evd.push(e));
+    (G.rel||[]).forEach(r=>S.rel.push(r));
+    if(G.tl && G.tl.length > S.tl.length) S.tl = G.tl.slice();
+    SET('LOOP_02', S.loop);
+  }
+  $('#title').remove();
+  resume(true);
+}
+function resume(fresh){
+  renderNav(); renderAside(); refreshHead();
+  $('#text').innerHTML = '';
+  loadChapter(fresh ? 'pro' : S.chapter);
+  AU.ambient(0);
+  step();
+}
+window.addEventListener('load', boot);
+
+</script>
+</body>
+</html>
