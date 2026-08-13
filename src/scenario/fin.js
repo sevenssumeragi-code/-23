@@ -19,7 +19,10 @@ SCENARIO.fin = [
  {chapTitle:'終章 あさやけ編'},
  {card:['FINAL CHAPTER','あさやけ編','DAY 13 ／ 8月13日',6]},
  {day:13},
+ {clock:'02:10'},
  {nar:'十三日目。街は静かで、霧が濃い。明日は、十年前の火災の日。'},
+ {nar:'——気づけば、二時を回っていた。'},
+ {nar:'昼のあいだに寝そびれた。今夜に使える時間は、いつもの三分の一もない。'},
  {nar:'朝から、街のどこかで消防車のサイレンが鳴った。誤報だったと、昼のニュースが伝えた。'},
  {nar:'誰も気づいていない。十年前の八月十三日にも、同じ誤報があったことを。'},
  {nar:'あなたは相談室に三台の電話を並べた。回線を三つ、同時に開くために。'},
@@ -29,9 +32,10 @@ SCENARIO.fin = [
  {sys:'準備できることは、あと少しだけあります。'},
 
  {ch:[
-  {t:'ヒュウとネオに、連携を頼む',tag:'発信',req:{and:[{f:'HYU_EYE_01'},{f:'NEO_ALLY_01'}]},
+  {t:'ヒュウとネオに、連携を頼む',tag:'発信',cost:45,
+   req:{and:[{f:'HYU_EYE_01'},{f:'NEO_ALLY_01'},{time:45}]},
    set:{NEO_HYU_01:1},go:'prep_neo'},
-  {t:'ムニに、逃げ方の続きを教える',tag:'発信',go:'prep_mun'},
+  {t:'ムニに、逃げ方の続きを教える',tag:'発信',cost:5,req:{time:30},go:'prep_mun'},
   {t:'何もせず、明日を待つ',tag:'保留',go:'d14'}
  ]},
 
@@ -90,13 +94,16 @@ SCENARIO.fin = [
  {nar:'——十年前の八月十三日。明日の夜、この子の世界は燃える。'},
  {nar:'この子の声は、いま、いちばん機嫌がいい。'},
  {ch:[
-  {t:'ムニ。煙が出たら、どうするんだった?',tag:'確認',req:{and:[{f:'MUN_TEACH_01'},{nf:'MUN_CHK1'}]},
+  {t:'ムニ。煙が出たら、どうするんだった?',tag:'確認',cost:10,
+   req:{and:[{f:'MUN_TEACH_01'},{nf:'MUN_CHK1'},{time:10}]},
    eff:{'MUN.trust':8},set:{MUN_CHK1:1},go:'prep_check1'},
   {t:'ムニ。裏の物置の鍵は、消火栓の箱の中にあるよ',tag:'教える',
-   hide:{and:[{loop:2},{f:'EVD_TAPE_01'}]},req:{and:[{f:'LEN_REMEMBER'},{nf:'MUN_TEACH_02'}]},
+   cost:18, hide:{and:[{loop:2},{f:'EVD_TAPE_01'}]},
+   req:{and:[{f:'LEN_REMEMBER'},{nf:'MUN_TEACH_02'},{time:18}]},
    set:{MUN_TEACH_02:1},eff:{'MUN.trust':12},go:'prep_key',
    line:'ムニ。よく聞いて。裏の物置の鍵は、廊下のいちばん奥、消火栓の箱の中にある。そこから外に出られる。'},
-  {t:'怖くなったら、私の声を思い出して',tag:'教える',req:{nf:'MUN_TEACH_03'},
+  {t:'怖くなったら、私の声を思い出して',tag:'教える',cost:18,
+   req:{and:[{nf:'MUN_TEACH_03'},{time:18}]},
    eff:{'MUN.trust':15,'MUN.fear':-20},set:{MUN_TEACH_03:1},go:'prep_check3'},
   {t:'……おやすみ、ムニ',tag:'別れ',eff:{'MUN.trust':5},go:'d14'}
  ]},
@@ -154,7 +161,9 @@ SCENARIO.fin = [
   {t:'【1】跡地の二人を取る',tag:'選択',go:'line1'},
   {t:'【2】渡岸を取る',tag:'選択',go:'line2'},
   {t:'【3】十年前を取る',tag:'選択',go:'line3'},
-  {t:'保留を使い、三本すべてを繋いだままにする',tag:'技術',go:'line_all'}
+  /* 追補 §5-2: ネオの留守電「保留を使え」を聞いていないと選べない。
+     救済経路は無い（取り返しのつかない2件のうちの1件）。 */
+  {t:'保留を使い、三本すべてを繋いだままにする',tag:'技術',hide:{f:'VM_neo_three'},go:'line_all'}
  ]},
 
  {n:'line_all'},

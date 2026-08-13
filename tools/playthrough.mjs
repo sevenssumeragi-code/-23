@@ -60,7 +60,7 @@ const fail = m => { failures++; console.error('  NG  ' + m); };
 async function driveOneLoop(trace) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const q  = s => document.querySelector(s);
-  const seen = { choices: 0, skipped: 0, stills: 0, cards: 0, listened: 0 };
+  const seen = { choices: 0, skipped: 0, stills: 0, cards: 0, listened: 0, vmPlayed: 0 };
   let traceIdx = 0;
 
   /* 新しい録音が入ったら、資料パネルを開いて 0.5 倍速で聴く。
@@ -84,6 +84,26 @@ async function driveOneLoop(trace) {
     await sleep(30);
   }
 
+  /* 新しい留守番電話が入ったら、パネルを開いて必ず再生する。
+     追補 §5 で留守電は二晩で上書きされ、聞き逃すと ger_shelf（室井のテープ）や
+     neo_three（終章の三回線）といった筋が切れる。熱心なプレイヤーは必ず聞くので
+     検証も「入ったら聞く」前提で通す。 */
+  async function playNewVoicemails() {
+    const vmBtn = [...document.querySelectorAll('#nav button')].find(b => b.dataset.p === 'vm');
+    if (!vmBtn || !vmBtn.querySelector('.badge')) return;
+    vmBtn.click();
+    await sleep(40);
+    for (let guard = 0; guard < 12; guard++) {
+      const b = document.querySelector('#pBody [data-vm]');
+      if (!b) break;
+      b.click();                // 再生され、VM_<key> が立ってパネルが再描画される
+      seen.vmPlayed++;
+      await sleep(40);
+    }
+    q('#pClose').click();
+    await sleep(30);
+  }
+
   const deadline = Date.now() + 10 * 60 * 1000;
   while (Date.now() < deadline) {
     // エンディング画面（.endname を持つ .ov）が出たら終了
@@ -96,6 +116,7 @@ async function driveOneLoop(trace) {
     if (q('.chapcard')) { seen.cards++; await sleep(300); continue; }
     // 録音が増えていたら聴く（パネルを開くので他の操作より先に済ませる）
     await listenToNewRecordings();
+    await playNewVoicemails();
     // スチルはクリックで閉じる
     if (q('#stillview.on')) { seen.stills++; q('#stillview').click(); await sleep(120); continue; }
 
@@ -111,8 +132,12 @@ async function driveOneLoop(trace) {
       // 手順は「押せる選択肢が出た回数」と 1:1 で記録されているので、
       // 見つかっても見つからなくても必ず 1 つ消費する（check.mjs と同じ数え方）
       const want = trace[traceIdx++];
-      // ボタン文言は「タグ + 本文」なので末尾一致で照合する
-      const target = usable.find(b => b.textContent.trim().endsWith(want)) || usable[0];
+      // ボタン文言は「タグ + 本文」なので末尾一致で照合する。
+      // 同時着信のボタンは「回線N + label + note」の形で末尾が note になるため、
+      // 末尾一致で見つからない場合は部分一致でも探す。
+      const target = usable.find(b => b.textContent.trim().endsWith(want))
+                  || (want ? usable.find(b => b.textContent.includes(want)) : null)
+                  || usable[0];
       seen.choices++;
       target.click();
       await sleep(60);
@@ -165,7 +190,7 @@ async function runRoute(browser, end, route) {
       loop: S.loop, recs: (G.recs || []).length, memo: S.memo.length,
       endings: (G.endings || []).slice(), saved: !!localStorage.getItem('ml:save')
     }));
-    notes.push(`周回${loop + 1}: ${result.end} / 選択${result.seen.choices}回 / 録音${state.recs}件 / メモ${state.memo}件`);
+    notes.push(`周回${loop + 1}: ${result.end} / 選択${result.seen.choices}回 / 録音${state.recs}件 / 留守電${result.seen.vmPlayed}件 / メモ${state.memo}件`);
 
     if (!state.saved) fail(`${end} 周回${loop + 1} 終了時に localStorage へ保存されていない`);
 

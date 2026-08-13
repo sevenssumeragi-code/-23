@@ -176,7 +176,15 @@ function applyData(nd){
 
 /* 時刻・日付の変更（DOM 更新は呼び出し側の責務） */
 function applyTime(nd){
-  if(nd.clock){ const [h,m] = nd.clock.split(':').map(Number); S.clock = h*60+m; }
+  // 表示系に付いた min は exec 側で加算されるので、ここでは単独ノードのみ扱う
+  if(nd.min && nd.say==null && nd.me==null && nd.nar==null && nd.sys==null) S.clock += nd.min;
+  if(nd.clock){
+    // 勤務は 22:00〜翌04:00。00:00〜03:59 は翌日側なので 24時間ぶん繰り上げる。
+    // これをしないと深夜の {clock:} 指定で時計が巻き戻り、残り時間が増えてしまう。
+    const [h,m] = nd.clock.split(':').map(Number);
+    let t = h*60+m; if(t < 22*60) t += 1440;
+    S.clock = t;
+  }
   if(nd.day){
     const prev = S.day;
     S.day = nd.day; S.clock = 22*60; S.overNoted = 0;

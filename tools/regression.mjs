@@ -227,7 +227,7 @@ test('{sec:n} は必ず選択肢ノードの直前に置かれている', () => 
   let n = 0;
   for (const [ch, arr] of Object.entries(SCENARIO)) {
     arr.forEach((nd, i) => {
-      if (nd.sec == null || nd.ch) return;
+      if (nd.sec == null || nd.ch || nd.multi) return;   // multi は sec を自前で持つ
       n++;
       const next = arr[i + 1];
       assert(next && next.ch, `${ch}[${i}] の {sec:${nd.sec}} の直後が選択肢ノードでない`);
@@ -478,6 +478,84 @@ test('キーの無いメモには札を付けられない', () => {
   api.markMemo(m, 'b');
   eq(m.mark, undefined === m.mark ? m.mark : null, 'キー無しメモに札が付いた');
   eq(Object.keys(S.flags).some(k => k.startsWith('MB_')), false, 'キー無しで MB_ が立った');
+});
+
+/* ------------------------------------------------------------
+   追補 §6-2 同時着信：取れるのは一本。残りは留守電に落ちる
+   ------------------------------------------------------------ */
+test('同時着信は3場面あり、取らなかった側は留守電と代償を持つ', () => {
+  const multis = [];
+  for (const [ch, arr] of Object.entries(SCENARIO))
+    arr.forEach(n => { if (n.multi) multis.push([ch, n]); });
+  eq(multis.length, 2, '同時着信（両方が鳴る形）の場面数が設計と違う');
+  // 第三章は通話中に第二回線が鳴る形なので multi ではなく保留で表現される（追補 §6-3）
+  const hold = SCENARIO.ch3.find(n => n.hold === 'HYU');
+  const resume = SCENARIO.ch3.find(n => n.resume);
+  assert(hold && resume, '第三章の保留（ヒュウ／ムニ）が無い');
+  for (const [ch, nd] of multis) {
+    assert(nd.sec, `${ch} の同時着信に制限時間が無い`);
+    assert(nd.miss, `${ch} の同時着信に取り逃し時の行き先が無い`);
+    for (const o of nd.multi) {
+      assert(o.label && o.go, `${ch} の回線に label / go が無い`);
+      assert(o.vm || o.skip, `${ch} の回線に、取らなかった場合の帰結が無い`);
+    }
+  }
+});
+
+test('同時着信で取らなかった回線は留守電に落ち、保存期限の対象になる', () => {
+  const S = fresh();
+  const nd = SCENARIO.ch2.find(n => n.multi);
+  const dropped = nd.multi[1];                       // レニィ側を取り逃す
+  api.applyData({ vm: dropped.vm });
+  api.applyPar(dropped.skip);
+  eq(S.vm.length, 1, '留守電に落ちていない');
+  eq(S.vm[0].k, dropped.vm[2], '留守電にキーが引き継がれていない');
+  S.day = 3;
+  eq(api.expireVM(), 1, '取り逃した留守電が保存期限の対象になっていない');
+});
+
+/* ------------------------------------------------------------
+   追補 §6-5 終章は意図的に時間が足りない
+   ------------------------------------------------------------ */
+test('終章は02:10開始で残110分。準備を全部はこなせない', () => {
+  const S = fresh();
+  const start = SCENARIO.fin.find(n => n.clock === '02:10');
+  assert(start, '終章の開始時刻が 02:10 でない');
+  api.applyTime({ day: 13 });
+  api.applyTime({ clock: '02:10' });
+  eq(api.timeLeft(), 110, '残り時間が110分でない');
+
+  const prep = SCENARIO.fin.find(n => n.ch && n.ch.some(o => o.go === 'prep_neo'));
+  const neo = prep.ch.find(o => o.go === 'prep_neo');
+  eq(neo.cost, 45, '連携準備の所要時間が45分でない');
+  // 3:33 のムニ回線に残る枠は 27分。鍵(18)と声(18)は両立しない
+  const mun = SCENARIO.fin.find(n => n.ch && n.ch.some(o => o.go === 'prep_key'));
+  const key = mun.ch.find(o => o.go === 'prep_key');
+  const voice = mun.ch.find(o => o.go === 'prep_check3');
+  eq(key.cost, 18, '鍵の伝達が18分でない');
+  eq(voice.cost, 18, '声の伝達が18分でない');
+  assert(key.cost + voice.cost > 27, '27分枠に両方が収まってしまう（詰めて二つ、の設計と矛盾）');
+});
+
+test('残り時間が足りないと {time:N} の選択肢は押せない', () => {
+  const S = fresh();
+  api.SET('MUN_TEACH_01');
+  const mun = SCENARIO.fin.find(n => n.ch && n.ch.some(o => o.go === 'prep_key'));
+  const voice = mun.ch.find(o => o.go === 'prep_check3');
+  S.clock = api.SHIFT_END - 18;
+  eq(api.cond(voice.req), true, '18分残っているのに押せない');
+  S.clock = api.SHIFT_END - 17;
+  eq(api.cond(voice.req), false, '17分しか無いのに押せてしまう');
+});
+
+test('終章の三回線同時接続は、ネオの留守電を聞いていないと出ない', () => {
+  const node = SCENARIO.fin.find(n => n.ch && n.ch.some(o => o.go === 'line_all'));
+  const opt = node.ch.find(o => o.go === 'line_all');
+  assert(opt.hide, '三回線の選択肢に解放条件が無い');
+  fresh();
+  eq(api.visibleChoices(node).some(o => o.go === 'line_all'), false, '留守電未再生でも選べてしまう');
+  api.SET('VM_neo_three');
+  eq(api.visibleChoices(node).some(o => o.go === 'line_all'), true, '留守電を聞いても選べない');
 });
 
 /* ------------------------------------------------------------ */

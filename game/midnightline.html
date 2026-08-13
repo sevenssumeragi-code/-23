@@ -1976,9 +1976,40 @@ SCENARIO.ch2 = [
  {nar:'六日目。昼のあいだ、あなたは眠れなかった。'},
  {nar:'目を閉じると、通話時間0秒という表示が浮かぶ。'},
  {clock:'23:50'},
- {ring:'normal'},
- {sys:'着信 — 23:50<br>番号：非通知'},
- {ch:[{t:'受話器を取る',tag:'受電',go:'ger1'}]},
+ /* 追補 §6-2 同時着信①。取らなかった側はその場で留守電に落ち、
+    §5 の保存期限ルールにそのまま接続する。 */
+ {multi:[
+  {label:'非通知の着信（初めての相手）',
+   note:'誰かは分からない。だが、こんな時間に非通知でかけてくる人間には理由がある。',
+   go:'ger1',
+   vm:['留守番電話 1件（非通知）','「……出られなかったか。ならメッセージを残す。<br>十年前の八月十四日、灯守園の火事を調べている。<br>それと——消えた者たちには共通点がある。全員、あの園にいたか、園の関係者の子どもだ」','ger_probe','GER',{c:'GER',trust:-10,doubt:15}],
+   skip:{c:'GER',doubt:8}},
+  {label:'レニィ（080-XXXX-2213）', note:'いつもの時間より、ずいぶん早い。',
+   go:'len_d6',
+   vm:['留守番電話 1件','レニィの声。「……あ、出ないんだ。いいよぉ、忙しいよね。<br>……えっと、なんでもないんだ。ほんとに。おやすみ」','len_d6vm','LEN',{c:'LEN',trust:-12,stress:12}],
+   skip:{c:'LEN',stress:6}}
+ ], sec:20, miss:'ger1'},
+
+ {n:'len_d6'},
+ {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
+ {c:'LEN',say:'……あ、出た。よかったぁ。'},
+ {nar:'安心した声。——安心されるほど、こちらは何もしていない。'},
+ {c:'LEN',say:'あのね。今日ね、なんでもない日なんだけど、なんでもないのが、こわいんだよぉ。'},
+ {nar:'なんでもない日が怖い、という言い方を、あなたは初めて聞いた。'},
+ {ch:[
+  {t:'そのまま、なんでもない話をしよう。時間はあるよ',tag:'傾聴',cost:22,
+   eff:{'LEN.trust':18,'LEN.stress':-15,'LEN.doubt':-12},set:{LEN_NIGHT6:1},go:'len_d6b'},
+  {t:'こわいのは、何かを思い出しかけているからかもしれない',tag:'核心',cost:6,
+   eff:{'LEN.trust':8,'LEN.fear':12},go:'len_d6b'},
+  {t:'（手短に切り上げる）',tag:'保留',cost:1,eff:{'LEN.trust':-6,'LEN.stress':8},go:'len_d6b'}
+ ]},
+
+ {n:'len_d6b'},
+ {c:'LEN',say:'……うん。ありがとぉ。少し、眠れそう。'},
+ {hang:'通話終了',hangKind:'normal'},
+ {nar:'受話器を置くと、非通知の呼び出し音は、とっくに止んでいた。'},
+ {nar:'——鳴っていたことに、途中から気づいていた。'},
+ {go:'ch2_wave'},
 
  {n:'ger1'},
  {call:{who:'発信者(女性)',c:'GER',num:'非通知'}},
@@ -2633,6 +2664,46 @@ SCENARIO.ch3 = [
  {nar:'相手の呼吸が乱れれば数を数え、足音が近づけば、名前を呼んだ。'},
  {nar:'いち、に、いち、に。ヒュウさん。ヒュウさん。いち、に。'},
  {c:'HYU',say:'……あなたの声が、聞こえている間は……走れます……'},
+ /* 追補 §6-3 保留の初出。ヒュウを保留してムニを取り、短く済ませて戻れば
+    両方守れる。長話をすればヒュウが分数ぶん削れる。 */
+ {clock:'03:33'},
+ {ring:'old'},{noise:3},
+ {sys:'第二回線に着信 — 03:33<br>番号：0X-XXX-1994'},
+ {nar:'よりによって、今。'},
+ {sec:14},
+ {ch:[
+  {t:'ヒュウから離れない。ムニの回線は取らない',tag:'選択',cost:4,
+   eff:{'HYU.trust':10},inc:{MUN_CUT_XX:1},go:'hyu_run_stay2'},
+  {t:'ヒュウを保留にして、ムニを取る',tag:'保留',cost:2,go:'hyu_hold'},
+  {t:'（両方に手を伸ばして、どちらも取り損ねる）',tag:'沈黙',silent:1,timeout:1,
+   eff:{'HYU.fear':20},inc:{MUN_CUT_XX:1},go:'hyu_run_stay2'}
+ ]},
+
+ {n:'hyu_hold'},
+ {hold:'HYU'},
+ {call:{who:'ムニ(5歳)',c:'MUN',num:'0X-XXX-1994'}},
+ {c:'MUN',say:'……でんわのひと? いま、いい?'},
+ {nar:'——いいわけがない。'},
+ {nar:'それでも、この子には「あとで」が通じない。あとが無いからだ。'},
+ {ch:[
+  {t:'ごめん、いま別の人と話してる。でも切らない。三十秒だけちょうだい',tag:'誠実',cost:3,
+   eff:{'MUN.trust':12,'MUN.doubt':-10},go:'hyu_hold2'},
+  {t:'（ムニの話を最後まで聞く）',tag:'傾聴',cost:14,
+   eff:{'MUN.trust':20,'MUN.fear':-15,'MUN.doubt':-12},set:{MUN_NIGHT8:1},go:'hyu_hold2'}
+ ]},
+
+ {n:'hyu_hold2'},
+ {c:'MUN',say:'あのね。きょう、へんなおじさんが、ムニのこと、じっとみてた。'},
+ {c:'MUN',say:'……あしがね、こう、ひきずるみたいなの。'},
+ {memo:['ムニを見ていた男','十年前の園内で、ムニは跛行の男に見られていた。','limp']},
+ {hang:'通話終了',hangKind:'normal'},
+ {resume:1},
+ {call:{who:'ヒュウ',c:'HYU',num:'080-XXXX-6621'}},
+ {c:'HYU',say:'……はぁっ、はぁっ……お戻りに、なりましたか。'},
+ {c:'HYU',say:'保留音、聞いていました。……オルゴールの、あの曲。<br>おかげで、まだ走れています。'},
+ {go:'hyu_run_stay2'},
+
+ {n:'hyu_run_stay2'},
  {nar:'走る音。砂利。金網。息。'},
  {nar:'跛行の拍は、遠ざかっては、また近づいた。'},
  {noise:3},
@@ -2777,14 +2848,54 @@ SCENARIO.ch4 = [
  {clock:'01:11'},
  {noise:2},
  {ring:'broken'},
- {sys:'着信 — 01:11<br>番号：▓▓▓-▓▓▓▓-▓▓▓▓'},
  {nar:'ベルの音が、割れている。'},
  {nar:'金属が裂けるような、聞いたことのない鳴り方だった。'},
+ {nar:'——そして、もう一台も鳴りはじめた。'},
+ /* 追補 §6-2 同時着信③。ジンパチを取ると、ネオの呼び出し音は
+    四十七分鳴り続け、その四十七分が実際に時計から引かれる。 */
+ {multi:[
+  {label:'割れたベル（▓▓▓-▓▓▓▓-▓▓▓▓）', note:'番号が文字化けしている。聞いたことのない鳴り方。',
+   go:'neo_pick',
+   vm:['留守番電話 1件（文字化け）','砂嵐。二重になった声。「——聞こえるか。……いや、いい。<br>次の夜、私の声を取れ。それまで、そちらの時間で十日ぶんだ」','neo_first','NEO',{c:'NEO',doubt:25}],
+   skip:{c:'NEO',doubt:10}},
+  {label:'ジンパチ（090-XXXX-4408）', note:'この二日で十七回目の着信。',
+   go:'jin_d9',
+   vm:['留守番電話 1件','ジンパチの声。「……なあ。ヒュウのこと、俺のせいじゃねえよな。<br>……わりい。今の、無し。忘れてくれ」','jin_d9vm','JIN',{c:'JIN',trust:-8,stress:12}],
+   skip:{c:'JIN',stress:10}}
+ ], sec:18, miss:'neo_miss'},
+
+ {n:'neo_pick'},
  {ch:[
   {t:'受話器を取る',tag:'受電',go:'neo1'},
   {t:'録音を回してから取る',tag:'記録',eff:{},set:{NEO_REC:1},go:'neo1',line:'（録音スイッチを入れてから、受話器を上げた）'},
   {t:'取らない',tag:'見送り',set:{NEO_MISS:1},go:'neo_miss'}
  ]},
+
+ {n:'jin_d9'},
+ {call:{who:'ジンパチ',c:'JIN',num:'090-XXXX-4408'}},
+ {c:'JIN',say:'……出た。出てくれた。'},
+ {nar:'声が掠れている。十七回かけて、十七回とも留守電だった人の声だ。'},
+ {c:'JIN',say:'あのさ。ヒュウが消えたの、俺のせいじゃねえよな。'},
+ {c:'JIN',say:'……いや、いい。答えなくていい。言いたかっただけだ。'},
+ {nar:'背後で、割れたベルが鳴り続けている。こちらの受話器から漏れて届いているらしい。'},
+ {c:'JIN',say:'……なあ、そっち、なんか鳴ってねえか。'},
+ {ch:[
+  {t:'鳴っています。でも、いまはあなたの話を聞きます',tag:'受容',cost:12,
+   eff:{'JIN.trust':18,'JIN.doubt':-15,'JIN.stress':-15},set:{JIN_D9_STAY:1},go:'jin_d9b'},
+  {t:'……すみません。もう一本、取らないといけない',tag:'切り上げ',cost:2,
+   eff:{'JIN.trust':-8,'JIN.stress':10},go:'jin_d9b'}
+ ]},
+
+ {n:'jin_d9b'},
+ {c:'JIN',say:'おう。……わりい、変な時間に。'},
+ {hang:'通話終了',hangKind:'normal'},
+ {nar:'受話器を置く。'},
+ {nar:'割れたベルは、まだ鳴っている。'},
+ {min:47},
+ {nar:'——四十七分、鳴り続けた。'},
+ {nar:'その間、あなたは一度も席を立たなかった。'},
+ {set:{NEO_MISS:1}},
+ {go:'neo1'},
 
  {n:'neo_miss'},
  {nar:'ベルは鳴りやまなかった。二十分。三十分。'},
@@ -3835,7 +3946,10 @@ SCENARIO.fin = [
  {chapTitle:'終章 あさやけ編'},
  {card:['FINAL CHAPTER','あさやけ編','DAY 13 ／ 8月13日',6]},
  {day:13},
+ {clock:'02:10'},
  {nar:'十三日目。街は静かで、霧が濃い。明日は、十年前の火災の日。'},
+ {nar:'——気づけば、二時を回っていた。'},
+ {nar:'昼のあいだに寝そびれた。今夜に使える時間は、いつもの三分の一もない。'},
  {nar:'朝から、街のどこかで消防車のサイレンが鳴った。誤報だったと、昼のニュースが伝えた。'},
  {nar:'誰も気づいていない。十年前の八月十三日にも、同じ誤報があったことを。'},
  {nar:'あなたは相談室に三台の電話を並べた。回線を三つ、同時に開くために。'},
@@ -3845,9 +3959,10 @@ SCENARIO.fin = [
  {sys:'準備できることは、あと少しだけあります。'},
 
  {ch:[
-  {t:'ヒュウとネオに、連携を頼む',tag:'発信',req:{and:[{f:'HYU_EYE_01'},{f:'NEO_ALLY_01'}]},
+  {t:'ヒュウとネオに、連携を頼む',tag:'発信',cost:45,
+   req:{and:[{f:'HYU_EYE_01'},{f:'NEO_ALLY_01'},{time:45}]},
    set:{NEO_HYU_01:1},go:'prep_neo'},
-  {t:'ムニに、逃げ方の続きを教える',tag:'発信',go:'prep_mun'},
+  {t:'ムニに、逃げ方の続きを教える',tag:'発信',cost:5,req:{time:30},go:'prep_mun'},
   {t:'何もせず、明日を待つ',tag:'保留',go:'d14'}
  ]},
 
@@ -3906,13 +4021,16 @@ SCENARIO.fin = [
  {nar:'——十年前の八月十三日。明日の夜、この子の世界は燃える。'},
  {nar:'この子の声は、いま、いちばん機嫌がいい。'},
  {ch:[
-  {t:'ムニ。煙が出たら、どうするんだった?',tag:'確認',req:{and:[{f:'MUN_TEACH_01'},{nf:'MUN_CHK1'}]},
+  {t:'ムニ。煙が出たら、どうするんだった?',tag:'確認',cost:10,
+   req:{and:[{f:'MUN_TEACH_01'},{nf:'MUN_CHK1'},{time:10}]},
    eff:{'MUN.trust':8},set:{MUN_CHK1:1},go:'prep_check1'},
   {t:'ムニ。裏の物置の鍵は、消火栓の箱の中にあるよ',tag:'教える',
-   hide:{and:[{loop:2},{f:'EVD_TAPE_01'}]},req:{and:[{f:'LEN_REMEMBER'},{nf:'MUN_TEACH_02'}]},
+   cost:18, hide:{and:[{loop:2},{f:'EVD_TAPE_01'}]},
+   req:{and:[{f:'LEN_REMEMBER'},{nf:'MUN_TEACH_02'},{time:18}]},
    set:{MUN_TEACH_02:1},eff:{'MUN.trust':12},go:'prep_key',
    line:'ムニ。よく聞いて。裏の物置の鍵は、廊下のいちばん奥、消火栓の箱の中にある。そこから外に出られる。'},
-  {t:'怖くなったら、私の声を思い出して',tag:'教える',req:{nf:'MUN_TEACH_03'},
+  {t:'怖くなったら、私の声を思い出して',tag:'教える',cost:18,
+   req:{and:[{nf:'MUN_TEACH_03'},{time:18}]},
    eff:{'MUN.trust':15,'MUN.fear':-20},set:{MUN_TEACH_03:1},go:'prep_check3'},
   {t:'……おやすみ、ムニ',tag:'別れ',eff:{'MUN.trust':5},go:'d14'}
  ]},
@@ -3970,7 +4088,9 @@ SCENARIO.fin = [
   {t:'【1】跡地の二人を取る',tag:'選択',go:'line1'},
   {t:'【2】渡岸を取る',tag:'選択',go:'line2'},
   {t:'【3】十年前を取る',tag:'選択',go:'line3'},
-  {t:'保留を使い、三本すべてを繋いだままにする',tag:'技術',go:'line_all'}
+  /* 追補 §5-2: ネオの留守電「保留を使え」を聞いていないと選べない。
+     救済経路は無い（取り返しのつかない2件のうちの1件）。 */
+  {t:'保留を使い、三本すべてを繋いだままにする',tag:'技術',hide:{f:'VM_neo_three'},go:'line_all'}
  ]},
 
  {n:'line_all'},
@@ -4774,7 +4894,15 @@ function applyData(nd){
 
 /* 時刻・日付の変更（DOM 更新は呼び出し側の責務） */
 function applyTime(nd){
-  if(nd.clock){ const [h,m] = nd.clock.split(':').map(Number); S.clock = h*60+m; }
+  // 表示系に付いた min は exec 側で加算されるので、ここでは単独ノードのみ扱う
+  if(nd.min && nd.say==null && nd.me==null && nd.nar==null && nd.sys==null) S.clock += nd.min;
+  if(nd.clock){
+    // 勤務は 22:00〜翌04:00。00:00〜03:59 は翌日側なので 24時間ぶん繰り上げる。
+    // これをしないと深夜の {clock:} 指定で時計が巻き戻り、残り時間が増えてしまう。
+    const [h,m] = nd.clock.split(':').map(Number);
+    let t = h*60+m; if(t < 22*60) t += 1440;
+    S.clock = t;
+  }
   if(nd.day){
     const prev = S.day;
     S.day = nd.day; S.clock = 22*60; S.overNoted = 0;
@@ -5288,7 +5416,7 @@ function exec(nd){
   if(nd.noise!=null) setNoise(nd.noise);
   if(nd.fx) fx(nd.fx);
   if(nd.amb!=null) AU.ambient(nd.amb);
-  if(nd.clock || nd.day){ applyTime(nd); refreshHead(); }
+  if(nd.clock || nd.day || nd.min != null){ applyTime(nd); refreshHead(); checkShift(); }
   // --- データ系(core と共通) ---
   applyData(nd);
   // --- 演出系(中断するもの) ---

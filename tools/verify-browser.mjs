@@ -69,11 +69,20 @@ function replayInPage({ runs }) {
       if (nd.call) { S.cur = nd.call; S.callStart = S.clock; }
       if (nd.hang != null) { if (S.cur) S.hist.push({ d: S.day, w: S.cur.who, r: nd.hang }); S.cur = null; }
       if (nd.noise != null) S.noise = nd.noise;
-      if (nd.clock || nd.day) applyTime(nd);
+      if (nd.clock || nd.day || nd.min != null) { applyTime(nd); checkShift(); }
       // データ系
       applyData(nd);
       // 録音は入手直後に 0.5 倍速で聴く（engine.js の playRec をそのまま呼ぶ）
       if (nd.rec) { const i = S.recs.length - 1; if (S.recs[i] && S.recs[i].hid) playRec(i, 'slow'); }
+      // 留守電も入手直後に再生する（engine.js の再生ボタンと同じ効果）
+      if (nd.vm) {
+        const v = S.vm[S.vm.length - 1];
+        if (v && !v.played) {
+          v.played = 1;
+          if (v.who && S.chars[v.who]) applyPar({ c: v.who, trust: 3, doubt: -5 });
+          if (v.k) SET('VM_' + v.k);
+        }
+      }
       if (nd.still) {
         if (!S.stills.includes(nd.still)) S.stills.push(nd.still);
         G.stills = G.stills || [];
@@ -83,6 +92,20 @@ function replayInPage({ runs }) {
       if (nd.chapTitle) S.chapTitle = nd.chapTitle;
       if (nd.card || nd.wait) continue;
       // 制御系
+      if (nd.hold) holdLine(nd.hold);
+      if (nd.resume) resumeLine();
+      if (nd.multi) {
+        // 同時着信：記録した手順から取った回線を選び、残りは留守電に落とす
+        const want = trace[k++];
+        const taken = nd.multi.find(o => o.label === want) || nd.multi[0];
+        for (const x of nd.multi) {
+          if (x === taken) continue;
+          if (x.vm) applyData({ vm: x.vm });
+          if (x.skip) applyPar(x.skip);
+        }
+        if (taken.go) { pc = labels[taken.go]; }
+        continue;
+      }
       if (nd.ch) {
         const sel = selectableChoices(nd);
         let o;

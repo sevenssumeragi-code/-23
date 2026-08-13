@@ -419,7 +419,7 @@ function exec(nd){
   if(nd.noise!=null) setNoise(nd.noise);
   if(nd.fx) fx(nd.fx);
   if(nd.amb!=null) AU.ambient(nd.amb);
-  if(nd.clock || nd.day){ applyTime(nd); refreshHead(); }
+  if(nd.clock || nd.day || nd.min != null){ applyTime(nd); refreshHead(); checkShift(); }
   // --- データ系(core と共通) ---
   applyData(nd);
   // --- 演出系(中断するもの) ---

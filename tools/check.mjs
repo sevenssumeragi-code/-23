@@ -135,7 +135,7 @@ function staticChecks() {
       if (nd.noise != null && !(nd.noise >= 0 && nd.noise <= 3)) fail(`noise が範囲外 ${nd.noise} (${where})`);
       // 独立した {sec:n} ノードは直後の選択肢ノードに適用される。
       // 直後が選択肢でないと値が宙に浮き、後続の無関係な選択肢に漏れる。
-      if (nd.sec != null && !nd.ch) {
+      if (nd.sec != null && !nd.ch && !nd.multi) {
         const next = arr[i + 1];
         if (!next || !next.ch) fail(`{sec:${nd.sec}} の直後が選択肢ノードではない (${where})`);
       }
@@ -199,6 +199,13 @@ function staticChecks() {
       while (i < arr.length && !seen.has(i)) {
         seen.add(i);
         const nd = arr[i];
+        if (nd.multi) {
+          // 同時着信：取った回線へ飛ぶ。取り逃した場合は miss へ。
+          nd.multi.forEach(o => { if (o.go && idx[o.go] != null) stack.push(idx[o.go]); });
+          if (nd.miss && idx[nd.miss] != null) stack.push(idx[nd.miss]);
+          if (nd.multi.every(o => o.go)) break;
+          i++; continue;
+        }
         if (nd.ch) {
           nd.ch.forEach(o => { if (o.go && idx[o.go] != null) stack.push(idx[o.go]); });
           if (nd.ch.every(o => o.go)) break;   // 全選択肢が go を持つなら素通しは起きない
@@ -284,7 +291,7 @@ class Play {
       S.cur = null;
     }
     if (nd.noise != null) S.noise = nd.noise;
-    if (nd.clock || nd.day) api.applyTime(nd);
+    if (nd.clock || nd.day || nd.min != null) { api.applyTime(nd); api.checkShift(); }
     // データ系（core と共通）
     api.applyData(nd);
     if (nd.rec) this.onRecording();
@@ -300,6 +307,9 @@ class Play {
     if (nd.card) return;
     if (nd.wait) return;
     // 制御系
+    if (nd.hold) api.holdLine(nd.hold);
+    if (nd.resume) api.resumeLine();
+    if (nd.multi) return this.chooseMulti(nd);
     if (nd.ch) return this.choose(nd);
     const target = api.resolveJump(nd);
     if (target) this.jump(target);
@@ -327,6 +337,22 @@ class Play {
     v.played = 1;
     if (v.who && S.chars[v.who]) api.applyPar({ c: v.who, trust: 3, doubt: -5 });
     if (v.k) api.SET('VM_' + v.k);
+  }
+  /** 同時着信。取れるのは一本だけで、残りはその場で留守電に落ちる。
+      engine.js の showMulti と同じ効果を与える。 */
+  chooseMulti(nd) {
+    // 方針は選択肢と同じ形（t / go）で受け取れるようにしておく
+    const opts = nd.multi.map(o => ({ ...o, t: o.label }));
+    const taken = this.policy.pickMulti
+      ? this.policy.pickMulti(opts, nd, this.rng)
+      : this.policy.pick(opts, nd, this.rng);
+    this.trace.push(taken.t);
+    for (const x of nd.multi) {
+      if (x.label === taken.t) continue;
+      if (x.vm) api.applyData({ vm: x.vm });
+      if (x.skip) api.applyPar(x.skip);
+    }
+    if (taken.go) this.jump(taken.go);
   }
   choose(nd) {
     const S = api.getS();
