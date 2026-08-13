@@ -293,6 +293,45 @@ test('tlfix は事件年表の空白行（index 1）だけを書き換える', (
   eq(S.tl[1].t, 'テスト', '空白行が書き換わっていない');
 });
 
+/* ------------------------------------------------------------
+   序章レニィの第一声は周回で差し替わる（design §10 鳥肌演出10）
+   1周目は通常、2周目以降は「前にも話したこと、あるよね?」。
+   ------------------------------------------------------------ */
+test('序章レニィの第一声が2周目以降で既視感版に差し替わる', () => {
+  fresh(freshG(), 1);
+  eq(api.cond({ loop: 2 }), false, '1周目で既視感版が出てしまう');
+  fresh({ ...freshG(), loops: 1 }, 2);
+  eq(api.cond({ loop: 2 }), true, '2周目で既視感版に切り替わらない');
+
+  const pro = api.SCENARIO.pro;
+  const at = l => pro.findIndex(n => n.n === l);
+  assert(at('len_call_1') >= 0 && at('len_call_2') >= 0, '分岐先ラベルが無い');
+  const sw = pro.find(n => n.if && n.then === 'len_call_2' && n.els === 'len_call_1');
+  assert(sw && sw.if.loop === 2, 'len_call の周回分岐が {loop:2} になっていない');
+  const dj = pro.slice(at('len_call_2')).find(n => n.say && n.say.includes('前にも話したこと'));
+  assert(dj, '2周目の第一声に設計の台詞が無い');
+});
+
+/* ------------------------------------------------------------
+   四章 neo_sync は、どの選択肢を選んでもネオが同じ言葉を返す
+   （design §10 鳥肌演出4「選択肢テキストとネオの声のシンクロ」）
+   ------------------------------------------------------------ */
+test('四章 neo_sync はどの選択肢でもネオが同一文言を同時に発する', () => {
+  const ch4 = api.SCENARIO.ch4;
+  const at = l => ch4.findIndex(n => n.n === l);
+  const chNode = ch4.slice(at('neo_sync')).find(n => n.ch);
+  assert(chNode, 'neo_sync に選択肢が無い');
+  eq(chNode.ch.length, 3, '選択肢が3つでない');
+  for (const opt of chNode.ch) {
+    const i = at(opt.go);
+    assert(i >= 0, `分岐先 ${opt.go} が無い`);
+    const line = ch4.slice(i).find(n => n.say);
+    assert(line, `${opt.go} にネオの台詞が無い`);
+    eq(line.c, 'NEO', `${opt.go} の話者がネオでない`);
+    eq(line.say.replace(/。$/, ''), opt.t, `${opt.go} の台詞が選択肢テキストと一致しない`);
+  }
+});
+
 /* ------------------------------------------------------------ */
 console.log('ミッドナイトライン ― 回帰テスト\n');
 for (const [mark, name] of results) {
