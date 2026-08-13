@@ -2010,7 +2010,7 @@ SCENARIO.fin = [
  {still:'s16'},
  {nar:'受話器を持つ手が、震えている。'},
  {nar:'十年分の朝が、いま、この部屋に届いた。'},
- {if:{f:'SEC_CALL_01'}, then:'ep_secret', els:'ep_true_end'},
+ {if:{and:[{f:'SEC_CALL_01'},{recs:7},{cleared:'TRUE'}]}, then:'ep_secret', els:'ep_true_end'},
 
  {n:'ep_true_end'},
  {end:'check'},
@@ -2104,6 +2104,8 @@ function cond(c){
   if(c.dbt) return S.chars[c.dbt[0]].doubt >= c.dbt[1];
   if(c.alive) return S.chars[c.alive].life === '生存';
   if(c.loop)  return S.loop >= c.loop;
+  if(c.recs)  return (G.recs||[]).length >= c.recs;      // 裏を暴いた録音の累計（周回跨ぎ）
+  if(c.cleared) return (G.endings||[]).includes(c.cleared); // 到達済みエンディング（周回跨ぎ）
   return true;
 }
 
@@ -2180,30 +2182,34 @@ function resolveJump(nd){
   return target;
 }
 
-/* ---------- エンディング判定 ---------- */
+/* ---------- エンディング判定 ----------
+   条件は design.md §6（エンディング表）と §12（TRUE/SECRET解放条件）に対応する。
+   §12 の条件リストのほうが具体的なので、両者が食い違う場合は §12 を採る。 */
+const REC_ALL = 7;   // 隠し録音の総数（r01〜r07）
+
 function judge(){
   const alive = k => S.chars[k].life === '生存';
-  const allAlive = ['LEN','JIN','GER','HYU','NEO'].every(alive);
+  // 「現在組」= 主人公が電話で関わる5名。ムニは十年前の人物なので含まない
+  const MAIN = ['LEN','JIN','GER','HYU','NEO'];
+  const allAlive = MAIN.every(alive);
+  const mainAlive = MAIN.filter(alive).length;
+
+  // GOOD: 灰堂逮捕 + 剛三冤罪証明 + 現在組全員生存
   const goodBase = F('KAI_EXPOSE_01') && F('GER_KNIFE_01') && F('JIN_RUSH_01') && alive('LEN');
+  // TRUE (§12): ①刷り込み3点 ②ムニ回線の切電 ③全員生存 ④テープ+波形の照合 ⑤共闘 ⑥真相解放
   const trueCond = goodBase && allAlive
     && F('MUN_TEACH_01') && F('MUN_TEACH_02') && F('MUN_TEACH_03')
     && CNT('MUN_CUT_XX') < 2 && F('EVD_TAPE_01') && F('EVD_WAVE_01') && F('NEO_HYU_01') && F('STORY_TRUE_KEY');
-  if(trueCond && F('SEC_CALL_01') && (G.recs||[]).length>=5 && (G.endings||[]).includes('TRUE')) return 'SECRET';
+  // SECRET (§12): TRUEクリア後の周回で隠し番号へ発信 + 隠し録音を全回収
+  const secretCond = trueCond && F('SEC_CALL_01')
+    && (G.recs||[]).length >= REC_ALL && (G.endings||[]).includes('TRUE');
+
+  if(secretCond) return 'SECRET';
   if(trueCond) return 'TRUE';
   if(goodBase && allAlive) return 'GOOD';
-  if(['LEN','JIN','GER'].filter(alive).length >= 2) return 'NORMAL';
-  return 'BAD';
-}
-
-/* Node（tools/check.mjs）からの読み出し口。ブラウザでは無害。 */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    CHARS, TRACKED, Hooks, newChar, newState, setState, setGlobal,
-    clockStr, cond, applyPar, applyData, applyTime, applyChoice,
-    visibleChoices, selectableChoices, timeoutChoice, resolveJump, judge,
-    get S(){ return S; }, get G(){ return G; },
-    F:(k)=>F(k), SET:(k,v)=>SET(k,v), CNT:(k)=>CNT(k)
-  };
+  // BAD (§6): 主要生存者2名以下、または裂け目閉鎖失敗（＝街が地図から消える）
+  if(mainAlive <= 2 || !F('RIFT_CLOSED')) return 'BAD';
+  return 'NORMAL';
 }
 
 /* ============================================================
@@ -2214,6 +2220,9 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
 let script = [], labels = {}, pc = 0, running = false, typing = null, tmr = null;
+/* シナリオは {sec:n} を選択肢ノードの手前に独立したノードとして置く。
+   直後の選択肢ノードに適用するため、いったんここに預かる。 */
+let pendingSec = null;
 
 /* ---------- 保存 ----------
    window.storage（ホスト提供の非標準API）→ localStorage → メモリ の順に試す。
@@ -2483,6 +2492,7 @@ Hooks.toastx= () => { const n = ['MUN_TEACH_01','MUN_TEACH_02','MUN_TEACH_03'].f
 
 /* ---------- 実行 ---------- */
 function loadChapter(id, startLabel){
+  pendingSec = null;
   script = SCENARIO[id]; labels = {};
   script.forEach((n,i)=>{ if(n.n) labels[n.n] = i; });
   S.chapter = id;
@@ -2532,6 +2542,7 @@ function exec(nd){
   if(nd.call){ startCall(nd.call); }
   if(nd.hang!=null){ endCall(nd.hang, nd.hangKind); }
   if(nd.ring){ AU.ring(nd.ring); }
+  if(nd.sec!=null) pendingSec = nd.sec;
   if(nd.noise!=null) setNoise(nd.noise);
   if(nd.fx) fx(nd.fx);
   if(nd.amb!=null) AU.ambient(nd.amb);
@@ -2587,7 +2598,9 @@ function showChoices(nd){
     b.onclick = ()=>{ if(!ok) return; AU.click(); pick(o, nd); };
     box.appendChild(b);
   });
-  if(nd.sec) startTimer(nd.sec, ()=>{ // 制限時間切れ = 沈黙してしまった
+  const sec = nd.sec != null ? nd.sec : pendingSec;
+  pendingSec = null;
+  if(sec) startTimer(sec, ()=>{ // 制限時間切れ = 沈黙してしまった
     pick(timeoutChoice(nd), nd, true);
   });
 }

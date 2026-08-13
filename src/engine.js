@@ -6,6 +6,9 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
 let script = [], labels = {}, pc = 0, running = false, typing = null, tmr = null;
+/* シナリオは {sec:n} を選択肢ノードの手前に独立したノードとして置く。
+   直後の選択肢ノードに適用するため、いったんここに預かる。 */
+let pendingSec = null;
 
 /* ---------- 保存 ----------
    window.storage（ホスト提供の非標準API）→ localStorage → メモリ の順に試す。
@@ -275,6 +278,7 @@ Hooks.toastx= () => { const n = ['MUN_TEACH_01','MUN_TEACH_02','MUN_TEACH_03'].f
 
 /* ---------- 実行 ---------- */
 function loadChapter(id, startLabel){
+  pendingSec = null;
   script = SCENARIO[id]; labels = {};
   script.forEach((n,i)=>{ if(n.n) labels[n.n] = i; });
   S.chapter = id;
@@ -324,6 +328,7 @@ function exec(nd){
   if(nd.call){ startCall(nd.call); }
   if(nd.hang!=null){ endCall(nd.hang, nd.hangKind); }
   if(nd.ring){ AU.ring(nd.ring); }
+  if(nd.sec!=null) pendingSec = nd.sec;
   if(nd.noise!=null) setNoise(nd.noise);
   if(nd.fx) fx(nd.fx);
   if(nd.amb!=null) AU.ambient(nd.amb);
@@ -379,7 +384,9 @@ function showChoices(nd){
     b.onclick = ()=>{ if(!ok) return; AU.click(); pick(o, nd); };
     box.appendChild(b);
   });
-  if(nd.sec) startTimer(nd.sec, ()=>{ // 制限時間切れ = 沈黙してしまった
+  const sec = nd.sec != null ? nd.sec : pendingSec;
+  pendingSec = null;
+  if(sec) startTimer(sec, ()=>{ // 制限時間切れ = 沈黙してしまった
     pick(timeoutChoice(nd), nd, true);
   });
 }

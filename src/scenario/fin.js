@@ -367,7 +367,7 @@ SCENARIO.fin = [
  {still:'s16'},
  {nar:'受話器を持つ手が、震えている。'},
  {nar:'十年分の朝が、いま、この部屋に届いた。'},
- {if:{f:'SEC_CALL_01'}, then:'ep_secret', els:'ep_true_end'},
+ {if:{and:[{f:'SEC_CALL_01'},{recs:7},{cleared:'TRUE'}]}, then:'ep_secret', els:'ep_true_end'},
 
  {n:'ep_true_end'},
  {end:'check'},

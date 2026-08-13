@@ -70,6 +70,8 @@ function cond(c){
   if(c.dbt) return S.chars[c.dbt[0]].doubt >= c.dbt[1];
   if(c.alive) return S.chars[c.alive].life === '生存';
   if(c.loop)  return S.loop >= c.loop;
+  if(c.recs)  return (G.recs||[]).length >= c.recs;      // 裏を暴いた録音の累計（周回跨ぎ）
+  if(c.cleared) return (G.endings||[]).includes(c.cleared); // 到達済みエンディング（周回跨ぎ）
   return true;
 }
 
@@ -146,28 +148,32 @@ function resolveJump(nd){
   return target;
 }
 
-/* ---------- エンディング判定 ---------- */
+/* ---------- エンディング判定 ----------
+   条件は design.md §6（エンディング表）と §12（TRUE/SECRET解放条件）に対応する。
+   §12 の条件リストのほうが具体的なので、両者が食い違う場合は §12 を採る。 */
+const REC_ALL = 7;   // 隠し録音の総数（r01〜r07）
+
 function judge(){
   const alive = k => S.chars[k].life === '生存';
-  const allAlive = ['LEN','JIN','GER','HYU','NEO'].every(alive);
+  // 「現在組」= 主人公が電話で関わる5名。ムニは十年前の人物なので含まない
+  const MAIN = ['LEN','JIN','GER','HYU','NEO'];
+  const allAlive = MAIN.every(alive);
+  const mainAlive = MAIN.filter(alive).length;
+
+  // GOOD: 灰堂逮捕 + 剛三冤罪証明 + 現在組全員生存
   const goodBase = F('KAI_EXPOSE_01') && F('GER_KNIFE_01') && F('JIN_RUSH_01') && alive('LEN');
+  // TRUE (§12): ①刷り込み3点 ②ムニ回線の切電 ③全員生存 ④テープ+波形の照合 ⑤共闘 ⑥真相解放
   const trueCond = goodBase && allAlive
     && F('MUN_TEACH_01') && F('MUN_TEACH_02') && F('MUN_TEACH_03')
     && CNT('MUN_CUT_XX') < 2 && F('EVD_TAPE_01') && F('EVD_WAVE_01') && F('NEO_HYU_01') && F('STORY_TRUE_KEY');
-  if(trueCond && F('SEC_CALL_01') && (G.recs||[]).length>=5 && (G.endings||[]).includes('TRUE')) return 'SECRET';
+  // SECRET (§12): TRUEクリア後の周回で隠し番号へ発信 + 隠し録音を全回収
+  const secretCond = trueCond && F('SEC_CALL_01')
+    && (G.recs||[]).length >= REC_ALL && (G.endings||[]).includes('TRUE');
+
+  if(secretCond) return 'SECRET';
   if(trueCond) return 'TRUE';
   if(goodBase && allAlive) return 'GOOD';
-  if(['LEN','JIN','GER'].filter(alive).length >= 2) return 'NORMAL';
-  return 'BAD';
-}
-
-/* Node（tools/check.mjs）からの読み出し口。ブラウザでは無害。 */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    CHARS, TRACKED, Hooks, newChar, newState, setState, setGlobal,
-    clockStr, cond, applyPar, applyData, applyTime, applyChoice,
-    visibleChoices, selectableChoices, timeoutChoice, resolveJump, judge,
-    get S(){ return S; }, get G(){ return G; },
-    F:(k)=>F(k), SET:(k,v)=>SET(k,v), CNT:(k)=>CNT(k)
-  };
+  // BAD (§6): 主要生存者2名以下、または裂け目閉鎖失敗（＝街が地図から消える）
+  if(mainAlive <= 2 || !F('RIFT_CLOSED')) return 'BAD';
+  return 'NORMAL';
 }
