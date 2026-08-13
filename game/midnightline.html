@@ -269,6 +269,8 @@ const ENDINGS = {
 
 /* ============================================================
    SCENARIO
+   章ごとのノード配列。各章ファイルが SCENARIO.<章ID> に代入する。
+   ノード仕様は docs/ENGINE.md を参照。
    ============================================================ */
 const SCENARIO = {};
 
@@ -2028,15 +2030,17 @@ SCENARIO.fin = [
  {rel:['七人目の子','—— 同一人物','あなた']},
  {end:'SECRET'}
 ];
-
 </script>
 <script>
 /* ============================================================
-   ミッドナイトライン ― エンジン
-   フラグ / パラメータ分岐 / 録音再生 / 資料 / 周回 / エンディング判定
+   ミッドナイトライン ― コア
+   DOM に一切触れない部分：状態・フラグ・条件評価・パラメータ・
+   ノードの状態変更・制御フロー解決・エンディング判定。
+
+   ここに置いたものは engine.js（ブラウザ）と tools/check.mjs（Node）の
+   両方から同じ実装として使われる。検証スクリプトが本番と違う挙動を
+   再実装してしまわないようにするための分離。
    ============================================================ */
-const $ = s => document.querySelector(s);
-const $$ = s => [...document.querySelectorAll(s)];
 
 const CHARS = {
   LEN:{name:'レニィ',sub:'男子学生・青い髪',col:'#7fa8ff'},
@@ -2053,8 +2057,15 @@ const CHARS = {
 };
 const TRACKED = ['LEN','HYU','JIN','MUN','GER','NEO'];
 
-/* ---------- 状態 ---------- */
-let S, G, script = [], labels = {}, pc = 0, running = false, typing = null, tmr = null;
+/* ---------- 状態 ----------
+   S = 周回内の状態（セーブ対象） / G = 周回を跨ぐ状態 */
+let S, G;
+
+/* UI 側フック。engine.js が実装を差し込む。
+   Node での検証時は既定の no-op のまま使う。 */
+const Hooks = {
+  par(){}, meet(){}, memo(){}, evd(){}, vm(){}, rec(){}, tlfix(){}
+};
 
 function newChar(){ return {trust:20,doubt:0,fear:0,stress:0,state:'安定',life:'生存',known:[]}; }
 function newState(loopCarry){
@@ -2071,18 +2082,144 @@ function newState(loopCarry){
     rel:[], vm:[], hist:[], recs:[], stills:[], cur:null, callStart:null
   };
 }
+function setState(s){ S = s; }
+function setGlobal(g){ G = g; }
+
 const F  = k => !!S.flags[k];
 const SET= (k,v=1) => { S.flags[k]=v; };
 const CNT= k => S.flags[k]|0;
 
+function clockStr(m){ m = ((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+
+/* ---------- 条件評価 ----------
+   上から最初に一致したキーだけを見て返す（複数キー併記は先勝ち）。 */
+function cond(c){
+  if(!c) return true;
+  if(c.and) return c.and.every(cond);
+  if(c.or)  return c.or.some(cond);
+  if(c.f)   return F(c.f);
+  if(c.nf)  return !F(c.nf);
+  if(c.cnt) return CNT(c.cnt[0]) >= c.cnt[1];
+  if(c.tr)  return S.chars[c.tr[0]].trust >= c.tr[1];
+  if(c.dbt) return S.chars[c.dbt[0]].doubt >= c.dbt[1];
+  if(c.alive) return S.chars[c.alive].life === '生存';
+  if(c.loop)  return S.loop >= c.loop;
+  return true;
+}
+
+/* ---------- パラメータ ---------- */
+function applyPar(p){
+  const c = S.chars[p.c]; if(!c) return;
+  ['trust','doubt','fear','stress'].forEach(k=>{ if(p[k]!=null) c[k] = Math.max(0,Math.min(100,c[k]+p[k])); });
+  const f = c.fear, st = c.stress;
+  c.state = (c.life!=='生存') ? c.life : (f>75||st>85 ? '危機' : f>50||st>60 ? '混乱' : f>25||st>35 ? '動揺' : '安定');
+  Hooks.par();
+}
+
+/* ---------- ノードの状態変更 ----------
+   exec() のうち DOM に触れない部分。engine.js と check.mjs の共通実装。
+   キーの評価順は元実装の exec() と同一。 */
+function applyData(nd){
+  if(nd.set){ Object.entries(nd.set).forEach(([k,v])=>SET(k,v)); }
+  if(nd.inc){ Object.entries(nd.inc).forEach(([k,v])=>SET(k, CNT(k)+v)); }
+  if(nd.par){ applyPar(nd.par); }
+  if(nd.meet){ SET('MET_'+nd.meet); S.chars[nd.meet].known = nd.known||[]; Hooks.meet(); }
+  if(nd.know){ const c = S.chars[nd.know[0]]; if(!c.known.includes(nd.know[1])) c.known.push(nd.know[1]); }
+  if(nd.life){ S.chars[nd.life[0]].life = nd.life[1]; applyPar({c:nd.life[0]}); }
+  if(nd.memo){ S.memo.push({d:S.day, t:nd.memo[0], x:nd.memo[1]}); Hooks.memo(nd.memo[0]); }
+  if(nd.evd){ S.evd.push({t:nd.evd[0], x:nd.evd[1]}); Hooks.evd(nd.evd[0]); }
+  if(nd.tl){ S.tl.push({d:nd.tl[0], t:nd.tl[1]}); }
+  if(nd.tlfix){ const e = S.tl[1]; e.d = nd.tlfix[0]; e.t = nd.tlfix[1]; Hooks.tlfix(); }
+  if(nd.rel){ S.rel.push({a:nd.rel[0], t:nd.rel[1], b:nd.rel[2], dot:nd.rel[3]}); }
+  if(nd.vm){ S.vm.push({d:S.day, c:clockStr(S.clock), w:nd.vm[0], x:nd.vm[1]}); Hooks.vm(); }
+  if(nd.rec){ S.recs.push({id:nd.rec.id, day:S.day, ti:nd.rec.ti, tx:nd.rec.tx, hid:nd.rec.hid, flag:nd.rec.flag,
+      opened:(G.recs||[]).includes(nd.rec.id)?1:0}); Hooks.rec(); }
+}
+
+/* 時刻・日付の変更（DOM 更新は呼び出し側の責務） */
+function applyTime(nd){
+  if(nd.clock){ const [h,m] = nd.clock.split(':').map(Number); S.clock = h*60+m; }
+  if(nd.day){ S.day = nd.day; S.clock = 22*60; }
+}
+
+/* ---------- 選択肢の状態変更 ---------- */
+function applyChoice(o){
+  S.clock += o.cost || 2;
+  if(o.eff) Object.entries(o.eff).forEach(([k,v])=>{
+    const [c,p] = k.split('.'); applyPar({c, [p]: v});
+  });
+  if(o.set) Object.entries(o.set).forEach(([k,v])=>SET(k,v));
+  if(o.inc) Object.entries(o.inc).forEach(([k,v])=>SET(k, CNT(k)+v));
+  if(o.memo) S.memo.push({d:S.day,t:o.memo[0],x:o.memo[1]});
+}
+
+/* 表示される選択肢（hide が不成立のものは存在しない） */
+function visibleChoices(nd){ return nd.ch.filter(o => !o.hide || cond(o.hide)); }
+/* 実際に押せる選択肢（req 不成立はロック表示される） */
+function selectableChoices(nd){ return visibleChoices(nd).filter(o => cond(o.req)); }
+/* 制限時間切れで自動選択されるもの */
+function timeoutChoice(nd){
+  const list = visibleChoices(nd);
+  return nd.ch.find(o=>o.timeout) || list[list.length-1];
+}
+
+/* ---------- 制御フロー ----------
+   go は if より先に評価される（元実装の順序を保存）。
+   if が成立すれば go の行き先を上書きし、不成立で els が無ければ go のまま。
+   戻り値: ジャンプ先ラベル名 / ジャンプ不要なら null */
+function resolveJump(nd){
+  let target = null;
+  if(nd.go) target = nd.go;
+  if(nd.if){
+    if(cond(nd.if)) target = nd.go2 || nd.then;
+    else if(nd.els) target = nd.els;
+  }
+  return target;
+}
+
+/* ---------- エンディング判定 ---------- */
+function judge(){
+  const alive = k => S.chars[k].life === '生存';
+  const 现 = ['LEN','JIN','GER','HYU','NEO'].every(alive);
+  const goodBase = F('KAI_EXPOSE_01') && F('GER_KNIFE_01') && F('JIN_RUSH_01') && alive('LEN');
+  const trueCond = goodBase && allAlive
+    && F('MUN_TEACH_01') && F('MUN_TEACH_02') && F('MUN_TEACH_03')
+    && CNT('MUN_CUT_XX') < 2 && F('EVD_TAPE_01') && F('EVD_WAVE_01') && F('NEO_HYU_01') && F('STORY_TRUE_KEY');
+  if(trueCond && F('SEC_CALL_01') && (G.recs||[]).length>=5 && (G.endings||[]).includes('TRUE')) return 'SECRET';
+  if(trueCond) return 'TRUE';
+  if(goodBase && allAlive) return 'GOOD';
+  if(['LEN','JIN','GER'].filter(alive).length >= 2) return 'NORMAL';
+  return 'BAD';
+}
+
+/* Node（tools/check.mjs）からの読み出し口。ブラウザでは無害。 */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    CHARS, TRACKED, Hooks, newChar, newState, setState, setGlobal,
+    clockStr, cond, applyPar, applyData, applyTime, applyChoice,
+    visibleChoices, selectableChoices, timeoutChoice, resolveJump, judge,
+    get S(){ return S; }, get G(){ return G; },
+    F:(k)=>F(k), SET:(k,v)=>SET(k,v), CNT:(k)=>CNT(k)
+  };
+}
+
+/* ============================================================
+   ミッドナイトライン ― エンジン
+   描画・音響・資料パネル・入力・保存。状態とロジックは core.js。
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+let script = [], labels = {}, pc = 0, running = false, typing = null, tmr = null;
+
 /* ---------- 保存 ---------- */
+const mem = {};
 async function saveAll(){
   try{
     await window.storage.set('ml:save', JSON.stringify(S));
     await window.storage.set('ml:global', JSON.stringify(G));
   }catch(e){ mem.save = JSON.stringify(S); mem.global = JSON.stringify(G); }
 }
-const mem = {};
 async function loadKey(k){
   try{ const r = await window.storage.get('ml:'+k); return r ? JSON.parse(r.value) : null; }
   catch(e){ return mem[k] ? JSON.parse(mem[k]) : null; }
@@ -2133,7 +2270,6 @@ const AU = {
 };
 
 /* ---------- 画面ヘルパ ---------- */
-function clockStr(m){ m = ((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
 function refreshHead(){
   $('#hDay').textContent = 'DAY '+String(S.day).padStart(2,'0');
   $('#hClock').textContent = clockStr(S.clock);
@@ -2201,14 +2337,7 @@ function skipType(){
   return false;
 }
 
-/* ---------- パラメータ ---------- */
-function applyPar(p){
-  const c = S.chars[p.c]; if(!c) return;
-  ['trust','doubt','fear','stress'].forEach(k=>{ if(p[k]!=null) c[k] = Math.max(0,Math.min(100,c[k]+p[k])); });
-  const f = c.fear, st = c.stress;
-  c.state = (c.life!=='生存') ? c.life : (f>75||st>85 ? '危機' : f>50||st>60 ? '混乱' : f>25||st>35 ? '動揺' : '安定');
-  renderAside();
-}
+/* ---------- 右ペイン ---------- */
 function renderAside(){
   const a = $('#aside'); let h = '<h4>相談者の状態</h4>';
   TRACKED.forEach(k=>{
@@ -2331,20 +2460,14 @@ function unlockStill(id, cont){
   showStill(id, cont);
 }
 
-/* ---------- 条件評価 ---------- */
-function cond(c){
-  if(!c) return true;
-  if(c.and) return c.and.every(cond);
-  if(c.or)  return c.or.some(cond);
-  if(c.f)   return F(c.f);
-  if(c.nf)  return !F(c.nf);
-  if(c.cnt) return CNT(c.cnt[0]) >= c.cnt[1];
-  if(c.tr)  return S.chars[c.tr[0]].trust >= c.tr[1];
-  if(c.dbt) return S.chars[c.dbt[0]].doubt >= c.dbt[1];
-  if(c.alive) return S.chars[c.alive].life === '生存';
-  if(c.loop)  return S.loop >= c.loop;
-  return true;
-}
+/* ---------- core からの通知を UI に繋ぐ ---------- */
+Hooks.par   = () => renderAside();
+Hooks.meet  = () => renderAside();
+Hooks.memo  = t => toast('相談メモに記録：'+t);
+Hooks.evd   = t => toast('証拠を入手：'+t);
+Hooks.vm    = () => { renderNav(); toast('留守番電話に1件のメッセージ'); };
+Hooks.rec   = () => { renderNav(); toast('通話を録音しました'); };
+Hooks.tlfix = () => toast('事件年表の空白が埋まった。');
 
 /* ---------- 実行 ---------- */
 function loadChapter(id, startLabel){
@@ -2367,7 +2490,7 @@ function advance(){ // ▼クリック
   step();
 }
 function exec(nd){
-  // --- 表示系 ---
+  // --- 表示系(ここで実行を中断する。同一ノードの他のキーは評価されない) ---
   if(nd.say!=null){
     const m = CHARS[nd.c] || CHARS.UNK;
     S.clock += 1; refreshHead();
@@ -2400,36 +2523,22 @@ function exec(nd){
   if(nd.noise!=null) setNoise(nd.noise);
   if(nd.fx) fx(nd.fx);
   if(nd.amb!=null) AU.ambient(nd.amb);
-  if(nd.clock){ const [h,m] = nd.clock.split(':').map(Number); S.clock = h*60+m; refreshHead(); }
-  if(nd.day){ S.day = nd.day; S.clock = 22*60; refreshHead(); }
-  if(nd.set){ Object.entries(nd.set).forEach(([k,v])=>SET(k,v)); }
-  if(nd.inc){ Object.entries(nd.inc).forEach(([k,v])=>SET(k, CNT(k)+v)); }
-  if(nd.par){ applyPar(nd.par); }
-  if(nd.meet){ SET('MET_'+nd.meet); S.chars[nd.meet].known = nd.known||[]; renderAside(); }
-  if(nd.know){ const c = S.chars[nd.know[0]]; if(!c.known.includes(nd.know[1])) c.known.push(nd.know[1]); }
-  if(nd.life){ S.chars[nd.life[0]].life = nd.life[1]; applyPar({c:nd.life[0]}); }
-  if(nd.memo){ S.memo.push({d:S.day, t:nd.memo[0], x:nd.memo[1]}); toast('相談メモに記録：'+nd.memo[0]); }
-  if(nd.evd){ S.evd.push({t:nd.evd[0], x:nd.evd[1]}); toast('証拠を入手：'+nd.evd[0]); }
-  if(nd.tl){ S.tl.push({d:nd.tl[0], t:nd.tl[1]}); }
-  if(nd.tlfix){ const e = S.tl[1]; e.d = nd.tlfix[0]; e.t = nd.tlfix[1]; toast('事件年表の空白が埋まった。'); }
-  if(nd.rel){ S.rel.push({a:nd.rel[0], t:nd.rel[1], b:nd.rel[2], dot:nd.rel[3]}); }
-  if(nd.vm){ S.vm.push({d:S.day, c:clockStr(S.clock), w:nd.vm[0], x:nd.vm[1]}); renderNav(); toast('留守番電話に1件のメッセージ'); }
-  if(nd.rec){ S.recs.push({id:nd.rec.id, day:S.day, ti:nd.rec.ti, tx:nd.rec.tx, hid:nd.rec.hid, flag:nd.rec.flag,
-      opened:(G.recs||[]).includes(nd.rec.id)?1:0}); renderNav(); toast('通話を録音しました'); }
+  if(nd.clock || nd.day){ applyTime(nd); refreshHead(); }
+  // --- データ系(core と共通) ---
+  applyData(nd);
+  // --- 演出系(中断するもの) ---
   if(nd.still){ saveAll(); unlockStill(nd.still, step); return; } // スチルを閉じると再開
   if(nd.chapTitle){ S.chapTitle = nd.chapTitle; }
   if(nd.card){ showChapCard(nd.card); return; }
   if(nd.wait){ setTimeout(step, nd.wait); return; }
   // --- 制御系 ---
   if(nd.ch){ showChoices(nd); return; }
-  if(nd.go){ jump(nd.go); }
-  if(nd.if){ if(cond(nd.if)) jump(nd.go2 || nd.then); else if(nd.els) jump(nd.els); }
+  const target = resolveJump(nd); if(target) jump(target);
   if(nd.chap){ saveAll(); loadChapter(nd.chap); $('#text').innerHTML=''; step(); return; }
   if(nd.end){ return endGame(nd.end); }
   if(nd.clear){ $('#text').innerHTML=''; }
   step();
 }
-
 /* 通話 */
 function startCall(c){
   S.cur = c; S.callStart = S.clock;
@@ -2453,7 +2562,7 @@ function endCall(reason, kind){
 /* 選択肢 */
 function showChoices(nd){
   const box = $('#choices'); box.innerHTML = ''; $('#next').style.display='none';
-  const list = nd.ch.filter(o => !o.hide || cond(o.hide));
+  const list = visibleChoices(nd);
   list.forEach(o=>{
     const ok = cond(o.req);
     const b = document.createElement('button');
@@ -2463,8 +2572,7 @@ function showChoices(nd){
     box.appendChild(b);
   });
   if(nd.sec) startTimer(nd.sec, ()=>{ // 制限時間切れ = 沈黙してしまった
-    const to = nd.ch.find(o=>o.timeout) || list[list.length-1];
-    pick(to, nd, true);
+    pick(timeoutChoice(nd), nd, true);
   });
 }
 function startTimer(sec, cb){
@@ -2481,13 +2589,7 @@ function pick(o, nd, timedout){
   clearInterval(tmr); $('#timer').style.transform='scaleX(0)';
   $('#choices').innerHTML = '';
   if(o.say!==false && o.t) pushLine(`<span class="nm">あなた</span>${timedout?'（沈黙した）':(o.line||o.t)}`, 'me');
-  S.clock += o.cost || 2;
-  if(o.eff) Object.entries(o.eff).forEach(([k,v])=>{
-    const [c,p] = k.split('.'); applyPar({c, [p]: v});
-  });
-  if(o.set) Object.entries(o.set).forEach(([k,v])=>SET(k,v));
-  if(o.inc) Object.entries(o.inc).forEach(([k,v])=>SET(k, CNT(k)+v));
-  if(o.memo) S.memo.push({d:S.day,t:o.memo[0],x:o.memo[1]});
+  applyChoice(o);
   refreshHead(); renderAside();
   if(o.go){ jump(o.go); }
   saveAll();
@@ -2504,20 +2606,7 @@ function showChapCard(c){
     setTimeout(()=>{ d.remove(); step(); }, 1000); }, 2400);
 }
 
-/* ---------- エンディング判定 ---------- */
-function judge(){
-  const alive = k => S.chars[k].life === '生存';
-  const现 = ['LEN','JIN','GER','HYU','NEO'].every(alive);
-  const goodBase = F('KAI_EXPOSE_01') && F('GER_KNIFE_01') && F('JIN_RUSH_01') && alive('LEN');
-  const trueCond = goodBase && allAlive
-    && F('MUN_TEACH_01') && F('MUN_TEACH_02') && F('MUN_TEACH_03')
-    && CNT('MUN_CUT_XX') < 2 && F('EVD_TAPE_01') && F('EVD_WAVE_01') && F('NEO_HYU_01') && F('STORY_TRUE_KEY');
-  if(trueCond && F('SEC_CALL_01') && (G.recs||[]).length>=5 && (G.endings||[]).includes('TRUE')) return 'SECRET';
-  if(trueCond) return 'TRUE';
-  if(goodBase && allAlive) return 'GOOD';
-  if(['LEN','JIN','GER'].filter(alive).length >= 2) return 'NORMAL';
-  return 'BAD';
-}
+/* ---------- エンディング ---------- */
 function endGame(tag){
   const id = tag === 'check' ? judge() : tag;
   AU.stopAmb();
@@ -2541,7 +2630,7 @@ function endGame(tag){
 
 /* ---------- 起動 ---------- */
 async function boot(){
-  G = await loadKey('global') || {loops:0, endings:[], recs:[], stills:[]};
+  setGlobal(await loadKey('global') || {loops:0, endings:[], recs:[], stills:[]});
   const sv = await loadKey('save');
   const ov = $('#title');
   ov.innerHTML = `<h1><small>MIDNIGHT LINE</small>ミッドナイトライン</h1>
@@ -2552,7 +2641,7 @@ async function boot(){
     <div class="sub" style="margin-top:30px;font-size:11px">到達エンディング ${(G.endings||[]).length} / 5　　発見した録音 ${(G.recs||[]).length}</div>`;
   $('#mNew').onclick = ()=> startGame(G.loops>0);
   $('#mInfo').onclick = ()=> showInfo();
-  if(sv) $('#mCont').onclick = ()=>{ S = sv; resume(); };
+  if(sv) $('#mCont').onclick = ()=>{ setState(sv); resume(); };
   waveInit();
   document.addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter'){ if($('#choices').children.length===0) advance(); } });
   $('#textwrap').onclick = ()=>{ if($('#choices').children.length===0) advance(); };
@@ -2581,7 +2670,7 @@ function showInfo(){
   document.body.appendChild(ov);
 }
 function startGame(carry){
-  S = newState(carry ? G : null);
+  setState(newState(carry ? G : null));
   if(carry){
     S.loop = (G.loops||0) + 1;
     (G.memo||[]).forEach(m=>S.memo.push(m));
@@ -2601,7 +2690,6 @@ function resume(fresh){
   step();
 }
 window.addEventListener('load', boot);
-
 </script>
 </body>
 </html>

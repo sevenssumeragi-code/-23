@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ミッドナイトライン ―澪原市いのちの電話―</title>
+<style>
+<!-- @include style.css -->
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="day" id="hDay">DAY 01</span>
+    <span class="clock" id="hClock">22:00</span>
+    <span class="chap" id="hChap">序章</span>
+    <span class="sp"></span>
+    <span id="hNoise"><i class="lamp" id="hLamp"></i><span id="hNoiseTx">回線良好</span></span>
+    <button class="iconbtn" id="bSound">♪ ON</button>
+    <button class="iconbtn" id="bMenu">MENU</button>
+  </header>
+  <main>
+    <nav id="nav"></nav>
+    <section id="stage">
+      <div id="caller"><div class="who" id="cWho">みおはらライン</div><div class="meta" id="cMeta">待機中 — 着信なし</div></div>
+      <canvas id="wave" width="900" height="64"></canvas>
+      <div id="textwrap"><div id="text"></div></div>
+      <div id="choices"></div>
+      <div id="timer" style="transform:scaleX(0)"></div>
+      <div id="next" style="display:none">▼ 続ける</div>
+      <div id="panel"><div class="ph"><h3 id="pTitle"></h3><button class="iconbtn" id="pClose">閉じる</button></div><div class="pb" id="pBody"></div></div>
+    </section>
+    <aside id="aside"></aside>
+  </main>
+  <div id="mobtabs">
+    <button data-m="call" class="act">通話</button>
+    <button data-m="nav">資料</button>
+    <button data-m="aside">相談者</button>
+  </div>
+</div>
+<div id="grain"></div><div id="vhs"></div><div id="flash"></div>
+<div id="stillview"><div class="im" id="svIm"></div><div class="cp" id="svCp"></div></div>
+<div class="ov" id="title"></div>
+<script>
+/* ============================================================
+   シナリオ本文データ
+   ============================================================ */
+<!-- @include data/stills.js -->
+
+<!-- @include data/endings.js -->
+
+<!-- @include scenario/_init.js -->
+
+<!-- @include scenario/pro.js -->
+
+<!-- @include scenario/ch1.js -->
+
+<!-- @include scenario/ch2.js -->
+
+<!-- @include scenario/ch3.js -->
+
+<!-- @include scenario/ch4.js -->
+
+<!-- @include scenario/ch5.js -->
+
+<!-- @include scenario/fin.js -->
+</script>
+<script>
+<!-- @include core.js -->
+
+<!-- @include engine.js -->
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "midnightline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "電話相談サスペンス心理ホラーミステリー『ミッドナイトライン ―澪原市いのちの電話―』",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "check": "node tools/build.mjs --check && node tools/check.mjs",
+    "check:routes": "node tools/check.mjs"
+  },
+  "engines": { "node": ">=18" }
+}
