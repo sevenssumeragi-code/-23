@@ -78,7 +78,7 @@ step()          → if (running) return          // タイプライタ表示中�
 | `nm` | string | 名前の上書き表示（`???` / `ムニ(15)` など、正体を伏せる用）|
 | `slow` | 1 | タイプ速度を 22ms → 46ms に落とす（重要台詞の演出）|
 | `w` | 1 | 囁きスタイル（`.tx.wsp`）※**シナリオ未使用** |
-| `se` | string | 効果音キー ※**参照表が空オブジェクトのため常に既定音**（GAP参照）|
+| `se` | string | 効果音キー（`SE` 表を引く）※**シナリオ未使用** |
 | `me` | string | 主人公の発話。**時刻+1分** ※**シナリオ未使用**（選択肢の `line` で代替）|
 | `nar` | string | 地の文。タイプライタ表示。**時刻は進まない** |
 | `sys` | string | システム表示（水色の枠線付き）。HTML可（`<br>` 使用）。タイプライタなし |
@@ -100,6 +100,7 @@ step()          → if (running) return          // タイプライタ表示中�
 | `card` | `[ラベル, 題名, 日付, ambLv]` | 章タイトルカード（**中断点**）。第4要素は環境音レベル |
 | `chapTitle` | string | ヘッダに出す章名を更新（`card` とは別）|
 | `wait` | number(ms) | 指定時間待って再開 ※**シナリオ未使用** |
+| `sec` | number(秒) | 次の選択肢ノードの制限時間。§4 参照 |
 
 **ノイズレベルの表示対応**
 
@@ -128,7 +129,7 @@ step()          → if (running) return          // タイプライタ表示中�
 | `rel` | `[A, 関係, B, dot?]` | 人物相関図に線を追加。第4要素が真なら点線（周回限定の隠し線）|
 | `vm` | `[題名, 本文]` | 留守番電話に追加（未再生バッジ付き）|
 | `rec` | `{id, ti, tx, hid, flag}` | 録音を追加。`hid` = 減速/逆再生で判明する裏内容、`flag` = 発見時に立つフラグ |
-| `toastx` | 1 | ※**エンジン未実装**。無視される（GAP参照）|
+| `toastx` | 1 | ムニへの刷り込み到達数（n/3）をトースト表示 |
 
 ### 3-4. 制御系
 
@@ -183,9 +184,21 @@ step()          → if (running) return          // タイプライタ表示中�
 | `timeout` | 制限時間切れ時に自動選択される選択肢の印 |
 | `go` | 遷移先ラベル。省略時はノード列を素通しで次へ |
 
-**`sec`（制限時間・秒）** をノードに書くと赤いバーが減り、切れると
+**`sec`（制限時間・秒）** を書くと赤いバーが減り、切れると
 `timeout:1` の選択肢が、無ければ**表示リストの最後の選択肢**が自動選択される。
 自動選択時はログに「（沈黙した）」と出る。
+
+`sec` の置き場所は 2 通りある。シナリオは一貫して後者を使っている。
+
+```js
+{ch:[...], sec:15}          // 選択肢ノードに直接書く
+{sec:15}, {ch:[...]}        // 直前に独立したノードとして置く（本作の書き方・全10箇所）
+```
+
+エンジンは `{sec:n}` 単独ノードを見つけると値を預かり、**次に現れた選択肢ノードに適用**して
+預かりを解除する。章を切り替えると預かりは破棄される。
+この預かり方式が成立するのは「`{sec:n}` の直後が必ず選択肢ノードである」ことが
+前提なので、`tools/check.mjs` と `tools/regression.mjs` がその配置を検査している。
 
 > `req` と `hide` の違いが本作の周回設計の要。
 > `hide` は「その周回では選択肢の存在自体を知り得ない」、
@@ -208,6 +221,8 @@ step()          → if (running) return          // タイプライタ表示中�
 | `dbt` | `[キャラID, n]` | 疑念が n 以上 ※**シナリオ未使用** |
 | `alive` | キャラID | 生死が `生存` |
 | `loop` | n | 周回数が n 以上 |
+| `recs` | n | **周回跨ぎ**。裏を暴いた録音の累計（`G.recs`）が n 件以上 |
+| `cleared` | END名 | **周回跨ぎ**。そのエンディングに到達済み（`G.endings`）|
 
 判定は **上から最初に一致したキーだけ** を見て返す（複数キー併記は先勝ち）。
 どのキーも無ければ `true`。
@@ -327,11 +342,15 @@ fear > 25 || stress > 35 → 動揺
 | `r06` | ネオ／混線通話 | `SEC_HINT_01` | 主人公への既視感 |
 | `r07` | 室井のテープ | `SEC_HINT_02` | 「七人目の子は、どこへ消えたんだ」|
 
-計 7 件。`G.recs` に暴いた録音IDが蓄積され、`judge()` の SECRET 判定で
-5 件以上が要求される（ただし §9-2 の通り、その分岐は到達しない）。
+計 7 件。暴いた録音IDは `G.recs` に蓄積され、**周回を跨いで引き継がれる**。
+SECRET はこの `G.recs` が 7 件（＝全部の裏を聴いた）であることを要求する。
 
-これらのフラグのうち判定に使われるのは `EVD_KAI_STEP` / `EVD_KAI_STEP2`
-（第五章の灰堂特定 `req` の `or` 条件）のみで、他は資料表示のみに使われる。
+個々のフラグのうち分岐に使われるのは `EVD_KAI_STEP` / `EVD_KAI_STEP2`
+（第五章の灰堂特定 `req` の `or` 条件）のみで、他は資料表示に使われる。
+
+フラグは周回ごとにリセットされるため、**聴き直すたびに立て直される**
+（`playRec` は `opened` の有無にかかわらずフラグをセットする）。
+`opened` は「はじめて底が見えた」演出の出し分けにだけ使う。
 
 ---
 
@@ -339,9 +358,14 @@ fear > 25 || stress > 35 → 動揺
 
 `{end:'check'}` ノード（`ep_normal` と `ep_true_end` の2箇所）から呼ばれる。
 
+条件は design.md §6（エンディング表）と §12（TRUE / SECRET 解放条件）に対応する。
+両者が食い違う場合は、より具体的な §12 の条件リストを採る。
+
 ```js
+MAIN      = ['LEN','JIN','GER','HYU','NEO']    // 「現在組」。ムニは十年前の人物なので含まない
 alive(k)  = S.chars[k].life === '生存'
-allAlive  = ['LEN','JIN','GER','HYU','NEO'].every(alive)      // ムニは含まない
+allAlive  = MAIN.every(alive)
+mainAlive = MAIN.filter(alive).length
 
 goodBase  = KAI_EXPOSE_01 && GER_KNIFE_01 && JIN_RUSH_01 && alive('LEN')
 
@@ -349,17 +373,25 @@ trueCond  = goodBase && allAlive
          && MUN_TEACH_01 && MUN_TEACH_02 && MUN_TEACH_03
          && MUN_CUT_XX < 2
          && EVD_TAPE_01 && EVD_WAVE_01 && NEO_HYU_01 && STORY_TRUE_KEY
+
+secretCond= trueCond && SEC_CALL_01
+         && G.recs.length >= 7 && G.endings に 'TRUE' を含む
 ```
 
 判定は **上から順に最初に成立したものを返す**。
 
-| 順 | END | 条件 |
-|---:|---|---|
-| 1 | `SECRET` | `trueCond` && `SEC_CALL_01` && `G.recs.length >= 5` && `G.endings` に `TRUE` を含む |
-| 2 | `TRUE` | `trueCond` |
-| 3 | `GOOD` | `goodBase && allAlive` |
-| 4 | `NORMAL` | `LEN` `JIN` `GER` のうち **2名以上が生存** |
-| 5 | `BAD` | 上記いずれにも当てはまらない |
+| 順 | END | 条件 | design 対応 |
+|---:|---|---|---|
+| 1 | `SECRET` | `secretCond` | §12「TRUEクリア後…隠し番号へ発信＋EVD_REC_S1〜S7全回収」|
+| 2 | `TRUE` | `trueCond` | §12 の①〜⑥ |
+| 3 | `GOOD` | `goodBase && allAlive` | §6「灰堂逮捕＋剛三冤罪証明＋現在組全員生存」|
+| 4 | `BAD` | `mainAlive <= 2` **または** `!RIFT_CLOSED` | §6「主要生存者2名以下／裂け目閉鎖失敗」|
+| 5 | `NORMAL` | 上記いずれにも当てはまらない | §6「現在の事件は阻止／ムニ死亡／灰堂の全容未解明」|
+
+> BAD の「／」は **or** として実装している。BAD の文面が「澪原市は地図から消えた」＝
+> 裂け目が開いたままの結末を描いているため、裂け目未閉鎖は生存者数と独立に BAD とみなす。
+> 裏を返すと **NORMAL には `RIFT_CLOSED` が必須**で、これは NORMAL の
+> 「現在の事件は阻止」という記述と整合する。
 
 ### 9-1. 終章側のゲート（`judge()` の手前）
 
@@ -374,17 +406,18 @@ MUN_SAVED && RIFT_CLOSED && KAI_EXPOSE_01 && GER_KNIFE_01 && JIN_RUSH_01
 - 通る → `ep_true` → 15歳のムニからの着信 → `SEC_CALL_01` があれば `ep_secret`、
   無ければ `ep_true_end` → `{end:'check'}`
 
-### 9-2. `judge()` の SECRET 分岐は到達しない（デッドコード）
+### 9-2. SECRET はシナリオ側のゲートで分岐する
 
-`SEC_CALL_01` が立っていて `trueCond` も満たす状況では、
-シナリオ側が `ep_secret` へ分岐して **`{end:'SECRET'}` を直接実行する**。
-したがって `{end:'check'}` に `SEC_CALL_01` 付きで到達する経路が存在せず、
-`judge()` 内の SECRET 分岐は評価されても真にならない。
-実際の SECRET 到達は **常にシナリオ側の直接指定**による。
+終章 `ep_true2` の末尾に次の分岐があり、ここを通ったときだけ
+`ep_secret`（`{end:'SECRET'}` を直接実行する）へ入る。
 
-> なお `judge()` の SECRET 条件（`G.recs >= 5` と `G.endings` に TRUE）は
-> シナリオ側の `ep_secret` 経路には課されていない。
-> 実質的な SECRET 到達条件は **「TRUE経路 + `SEC_CALL_01`（2周目以降の隠し発信）」** のみ。
+```js
+{if:{and:[{f:'SEC_CALL_01'},{recs:7},{cleared:'TRUE'}]}, then:'ep_secret', els:'ep_true_end'}
+```
+
+`judge()` 側の SECRET 条件はこれと同じ内容で、`{end:'check'}` 経由で来た場合の
+保険として残してある。通常はシナリオ側のゲートが先に効くため、
+`judge()` の SECRET 分岐が使われることはない。
 
 ### 9-3. 到達に必要な最小周回数
 
@@ -392,7 +425,7 @@ MUN_SAVED && RIFT_CLOSED && KAI_EXPOSE_01 && GER_KNIFE_01 && JIN_RUSH_01
 |---|---:|---|
 | BAD / NORMAL / GOOD | 1 | 1周目で到達可能 |
 | TRUE | **2** | `MUN_TEACH_02` の選択肢が `hide:{and:[{loop:2},{f:'EVD_TAPE_01'}]}` |
-| SECRET | **2** | `SEC_CALL_01` の隠し発信も `hide:{loop:2}` |
+| SECRET | **3** | `cleared:'TRUE'` を要求するため、TRUE を取った周回の次が最短 |
 
 `EVD_TAPE_01` は周回引き継ぎ対象**ではない**（フラグはリセットされる）ため、
 TRUE 周回でも第五章でテープを再取得する必要がある。

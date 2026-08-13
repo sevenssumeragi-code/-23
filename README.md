@@ -32,8 +32,11 @@ src/
     pro.js ch1..ch5 fin.js   章ごとのノード配列（計 1237 ノード）
 tools/
   build.mjs              src/ → game/midnightline.html
+  load-core.mjs          core.js とシナリオを Node へ読み込む共通ローダ
   check.mjs              静的検査 + 全ルート自動プレイ
-  verify-browser.mjs     実ブラウザとの照合（任意）
+  regression.mjs         回帰テスト（過去の不具合を症状の形で固定）
+  verify-browser.mjs     ヘッドレス検証と実ブラウザの照合
+  playthrough.mjs        実ブラウザ通しプレイ + セーブ/ロード + 周回
   routes.json            各エンディングへの到達手順（回帰テスト用）
 game/
   midnightline.html      ビルド成果物（単一ファイル）
@@ -42,11 +45,24 @@ game/
 ## 開発
 
 ```bash
-npm run build          # src/ から game/midnightline.html を生成
-npm run check          # ビルド出力の同期確認 + 静的検査 + ルート検証
-npm run check:browser  # routes.json を実ブラウザで再生して照合（要 playwright）
-npm run check:record   # 探索したルートを routes.json に記録し直す
+npm run build            # src/ から game/midnightline.html を生成
+npm run check            # ビルド同期確認 + 回帰テスト + 静的検査 + ルート検証
+npm run test:browser     # routes.json を実ブラウザで再生して照合（要 playwright）
+npm run test:play        # 実ブラウザで画面を操作して通しプレイ（要 playwright）
+npm run test:all         # 上記すべて
+npm run check:record     # 探索したルートを routes.json に記録し直す
 ```
+
+### 検証の三層
+
+| 層 | ツール | 何を見るか |
+|---|---|---|
+| 静的 | `check.mjs` | ラベル・命令・キャラ・フラグの参照整合性、到達可能性 |
+| 状態遷移 | `check.mjs` / `regression.mjs` | 本番の core.js を使って全ルートを自動プレイし、5エンディングへの到達性と過去バグの再発を確認 |
+| 実操作 | `playthrough.mjs` / `verify-browser.mjs` | 実ブラウザで実際にボタンを押して最後まで遊べるか、セーブ/ロード・周回が壊れていないか |
+
+上の層だけでは engine.js 側のバグを取り逃す。実際、`playRec` の周回バグは
+実ブラウザ照合ではじめて見つかった。
 
 ビルドはトランスパイルもバンドラも使わず、`<!-- @include path -->` を
 ファイル内容に差し替えるだけ。出力は素の単一HTMLのまま維持される。
