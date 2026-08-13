@@ -89,8 +89,10 @@ function applyData(nd){
   if(nd.set){ Object.entries(nd.set).forEach(([k,v])=>SET(k,v)); }
   if(nd.inc){ Object.entries(nd.inc).forEach(([k,v])=>SET(k, CNT(k)+v)); }
   if(nd.par){ applyPar(nd.par); }
-  if(nd.meet){ SET('MET_'+nd.meet); S.chars[nd.meet].known = nd.known||[]; Hooks.meet(); }
-  if(nd.know){ const c = S.chars[nd.know[0]]; if(!c.known.includes(nd.know[1])) c.known.push(nd.know[1]); }
+  // meet / know は TRACKED 外のキャラ（灰堂・室井など）にも使われる。
+  // その場合パラメータの器が無いので、フラグだけ立てて器の操作は飛ばす。
+  if(nd.meet){ SET('MET_'+nd.meet); const c = S.chars[nd.meet]; if(c) c.known = nd.known||[]; Hooks.meet(); }
+  if(nd.know){ const c = S.chars[nd.know[0]]; if(c && !c.known.includes(nd.know[1])) c.known.push(nd.know[1]); }
   if(nd.life){ S.chars[nd.life[0]].life = nd.life[1]; applyPar({c:nd.life[0]}); }
   if(nd.memo){ S.memo.push({d:S.day, t:nd.memo[0], x:nd.memo[1]}); Hooks.memo(nd.memo[0]); }
   if(nd.evd){ S.evd.push({t:nd.evd[0], x:nd.evd[1]}); Hooks.evd(nd.evd[0]); }

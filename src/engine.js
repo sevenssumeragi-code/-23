@@ -229,10 +229,13 @@ function playRec(i, mode){
   const r = S.recs[i]; r.played = 1;
   AU.noise(.5,.04);
   if(mode!=='play' && r.hid){
-    if(!r.opened){
+    // フラグは毎回立て直す。opened は周回を跨いで引き継がれるが
+    // フラグは周回ごとにリセットされるため、初回だけ立てると
+    // 2周目で証拠照合の req が満たせなくなる。
+    if(r.flag){ SET(r.flag); }
+    if(!(G.recs||[]).includes(r.id)){ G.recs = G.recs||[]; G.recs.push(r.id); }
+    if(!r.opened){   // 演出は「はじめて底が見えた」ときだけ
       r.opened = 1;
-      if(r.flag){ SET(r.flag); }
-      if(!(G.recs||[]).includes(r.id)){ G.recs = G.recs||[]; G.recs.push(r.id); }
       fx('shake'); AU.beep(80,1.2,.05,'sawtooth');
       toast('録音の底から、別の声が浮かび上がった。');
     }
