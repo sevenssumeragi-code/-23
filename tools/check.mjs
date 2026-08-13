@@ -153,6 +153,11 @@ function staticChecks() {
       if (nd.inc) Object.keys(nd.inc).forEach(f => setFlags.add(f));
       if (nd.rec && nd.rec.flag) setFlags.add(nd.rec.flag);
       if (nd.meet) setFlags.add('MET_' + nd.meet);
+      // engine.js が立てる派生フラグ。シナリオ側に set: は書かれない。
+      //   留守電: 再生で VM_<k> / 上書きで VM_LOST_<k>
+      //   メモの札: 〈信じる〉で MB_<k> / 〈疑う〉で MD_<k>
+      if (nd.vm && nd.vm[2]) { setFlags.add('VM_' + nd.vm[2]); setFlags.add('VM_LOST_' + nd.vm[2]); }
+      if (nd.memo && nd.memo[2]) { setFlags.add('MB_' + nd.memo[2]); setFlags.add('MD_' + nd.memo[2]); }
       walkCond(nd.if, where);
       // 選択肢
       if (nd.ch) {
@@ -283,6 +288,7 @@ class Play {
     // データ系（core と共通）
     api.applyData(nd);
     if (nd.rec) this.onRecording();
+    if (nd.vm) this.onVoicemail();
     if (nd.still) {
       if (!S.stills.includes(nd.still)) S.stills.push(nd.still);
       const G = api.getG();
@@ -310,6 +316,17 @@ class Play {
     if (r.flag) api.SET(r.flag);
     G.recs = G.recs || [];
     if (!G.recs.includes(r.id)) G.recs.push(r.id);
+  }
+  /** 留守電を入手した直後。再生するかどうかは方針しだい。
+      engine.js の留守電パネルの再生ボタンと同じ効果を与える。 */
+  onVoicemail() {
+    const S = api.getS();
+    const v = S.vm[S.vm.length - 1];
+    if (!v) return;
+    if (!this.policy.listenVM(this.rng)) return;
+    v.played = 1;
+    if (v.who && S.chars[v.who]) api.applyPar({ c: v.who, trust: 3, doubt: -5 });
+    if (v.k) api.SET('VM_' + v.k);
   }
   choose(nd) {
     const S = api.getS();
@@ -343,6 +360,7 @@ function mulberry32(a) {
 /** 完全乱択 */
 const randomPolicy = (listenRate = 0.5) => ({
   listen: rng => rng() < listenRate,
+  listenVM: rng => rng() < listenRate,
   pick: (list, nd, rng) => list[Math.floor(rng() * list.length)]
 });
 
@@ -352,6 +370,7 @@ const randomPolicy = (listenRate = 0.5) => ({
  */
 const goalPolicy = (want, avoid, trustSign = 1, eps = 0.15, listenRate = 1) => ({
   listen: rng => rng() < listenRate,
+  listenVM: rng => rng() < listenRate,
   pick(list, nd, rng) {
     if (rng() < eps) return list[Math.floor(rng() * list.length)];
     let best = null, bestScore = -Infinity;
@@ -516,6 +535,7 @@ function replayRoutes() {
         let k = 0;
         const policy = {
           listen: () => true,
+          listenVM: () => true,
           pick: (list, nd) => {
             const want = traceForLoop[k++];
             const m = want != null && list.find(o => o.t === want);
@@ -543,6 +563,7 @@ function replayRoutes() {
 /** 疑ってかかり続ける。疑念を上げる手を最優先し、下げる手を避ける */
 const doubtPolicy = () => ({
   listen: () => true,
+  listenVM: () => true,
   pick(list) {
     let best = list[0], bestScore = -Infinity;
     for (const o of list) {
@@ -559,7 +580,8 @@ const doubtPolicy = () => ({
 
 /** 留守電を一切聞かない（listen=false）＝ §5 の上書きを必ず起こす */
 const ignoreVMPolicy = () => ({
-  listen: () => false,
+  listen: () => true,
+  listenVM: () => false,
   pick: (list, nd, rng) => list[Math.floor(rng() * list.length)]
 });
 
@@ -592,6 +614,22 @@ function playstyles(seed) {
   }
   if (miss > 0) ok(`留守電を放置すると上書きされる（最大 VM_MISS ${miss} 件）`);
   else fail('留守電を放置しても一件も上書きされない＝保存期限が効いていない');
+
+  // 3. 追補 §5-5: 他がすべて最適でも、留守電を放置するだけで到達ENDが一段下がる。
+  //    GOOD を狙う方針のまま留守電だけ聞かない設定にして、届かないことを確かめる。
+  const goodPlan = () => {
+    const p = goalPolicy(TRUE_FLAGS.filter(f => f !== 'SEC_CALL_01'), [], 1, 0.12, 1);
+    return { ...p, listenVM: () => false };
+  };
+  let reached = null, best = new Set();
+  for (let i = 0; i < 400 && !reached; i++) {
+    const G = freshG();
+    const r = playOnce(goodPlan(), seed + i * 613, G);
+    best.add(r.end);
+    if (r.end === 'GOOD' || r.end === 'TRUE') reached = r.end;
+  }
+  if (reached) fail(`留守電を放置しても ${reached} に到達してしまう（§5-5 の設計と食い違う）`);
+  else ok(`留守電を放置すると最善手でも ${[...best].join('・')} 止まり（GOOD に届かない）`);
 }
 
 /* ============================================================

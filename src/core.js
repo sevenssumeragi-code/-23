@@ -186,12 +186,22 @@ function applyTime(nd){
 
 /* ---------- メモの札（追補 §2） ----------
    同じ札をもう一度押すと保留（未記入）に戻る。札は相手には見えない。 */
+/* 〈疑う〉ままで接すると、それが声に出る相手がいる（追補 §2-2）。
+   疑うこと自体は罰しない。代償があるのはこの2件だけ。 */
+const DOUBT_COST = { jin_regret:{c:'JIN', doubt:10}, place:{c:'MUN', doubt:8} };
 function markMemo(m, v){
   if(!m || !m.k) return;
+  const was = m.mark;
   delete S.flags['MB_'+m.k]; delete S.flags['MD_'+m.k];
   m.mark = (m.mark === v) ? null : v;
   if(m.mark === 'b') SET('MB_'+m.k);
-  if(m.mark === 'd') SET('MD_'+m.k);
+  if(m.mark === 'd'){
+    SET('MD_'+m.k);
+    // 代償は札を付けた最初の一回だけ。付け外しで累積させない。
+    if(was !== 'd' && !F('MDCOST_'+m.k) && DOUBT_COST[m.k]){
+      SET('MDCOST_'+m.k); applyPar(DOUBT_COST[m.k]);
+    }
+  }
 }
 
 /* ---------- 選択肢の状態変更 ---------- */
