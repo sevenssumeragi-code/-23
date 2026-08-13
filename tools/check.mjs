@@ -2,6 +2,13 @@
 /* ============================================================
    検証: シナリオの静的検査 + 全ルート自動プレイ
 
+   静的検査の内訳:
+     ラベル参照 / 章参照 / END参照 / キャラ参照 / スチル参照 / フラグ参照
+     ノードキー / 選択肢キー / 条件キー / パラメータ名 / 生死の値 / noise の範囲
+     ラベル重複 / 到達不能ラベル / 到達不能ノード
+     表示系ノードへの無視されるキーの同居 / go と if の同居
+     {sec:n} の配置 / 制限時間つき選択肢の timeout / 進行不能な選択肢
+
      node tools/check.mjs              静的検査 + ルート探索 + 固定ルート再生
      node tools/check.mjs --record     到達したルートを tools/routes.json に保存
      node tools/check.mjs --rollouts N 乱択ロールアウト回数（既定 20000）
@@ -14,10 +21,9 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
+import { loadApi, freshG } from './load-core.mjs';
 
 const ROOT   = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SRC    = join(ROOT, 'src');
 const ROUTES = join(ROOT, 'tools', 'routes.json');
 
 const argv = process.argv.slice(2);
@@ -36,30 +42,6 @@ const fail = m => { failures++; console.error('  NG  ' + m); };
 const ok   = m => { if (!QUIET) console.log('  ok  ' + m); };
 const head = m => { if (!QUIET) console.log('\n' + m); };
 
-/* ============================================================
-   1. src/core.js とシナリオデータを Node 上へ読み込む
-   ブラウザと同じ「同一スコープに連結された複数スクリプト」を
-   vm コンテキストで再現する。
-   ============================================================ */
-function loadApi() {
-  const ctx = vm.createContext({ console, JSON, Math, Object, Array, String, Number });
-  const files = [
-    'data/stills.js', 'data/endings.js', 'scenario/_init.js',
-    'scenario/pro.js', 'scenario/ch1.js', 'scenario/ch2.js', 'scenario/ch3.js',
-    'scenario/ch4.js', 'scenario/ch5.js', 'scenario/fin.js',
-    'core.js'
-  ];
-  for (const f of files) {
-    vm.runInContext(readFileSync(join(SRC, f), 'utf8'), ctx, { filename: f });
-  }
-  vm.runInContext(`globalThis.__api = {
-    STILLS, ENDINGS, SCENARIO, CHARS, TRACKED, Hooks,
-    newState, setState, setGlobal, cond, applyPar, applyData, applyTime,
-    applyChoice, visibleChoices, selectableChoices, timeoutChoice, resolveJump, judge,
-    F, SET, CNT, getS: () => S, getG: () => G
-  };`, ctx);
-  return ctx.__api;
-}
 const api = loadApi();
 const { SCENARIO, STILLS } = api;
 
@@ -78,7 +60,7 @@ const CHOICE_KEYS = new Set([
   't', 'tag', 'line', 'say', 'silent', 'req', 'hide', 'eff', 'set', 'inc',
   'memo', 'cost', 'timeout', 'go'
 ]);
-const COND_KEYS = new Set(['and', 'or', 'f', 'nf', 'cnt', 'tr', 'dbt', 'alive', 'loop']);
+const COND_KEYS = new Set(['and', 'or', 'f', 'nf', 'cnt', 'tr', 'dbt', 'alive', 'loop', 'recs', 'cleared']);
 const LIFE_VALUES = new Set(['生存', '危篤', '死亡', '消失']);
 
 function staticChecks() {
@@ -149,6 +131,12 @@ function staticChecks() {
       if (nd.know && !tracked.has(nd.know[0])) fail(`know は追跡対象のキャラにしか効かない "${nd.know[0]}" (${where})`);
       // ノイズ
       if (nd.noise != null && !(nd.noise >= 0 && nd.noise <= 3)) fail(`noise が範囲外 ${nd.noise} (${where})`);
+      // 独立した {sec:n} ノードは直後の選択肢ノードに適用される。
+      // 直後が選択肢でないと値が宙に浮き、後続の無関係な選択肢に漏れる。
+      if (nd.sec != null && !nd.ch) {
+        const next = arr[i + 1];
+        if (!next || !next.ch) fail(`{sec:${nd.sec}} の直後が選択肢ノードではない (${where})`);
+      }
       // 表示系ノードに状態変更が同居していないか（exec が即 return するため無視される）
       const isDisplay = nd.say != null || nd.me != null || nd.nar != null || nd.sys != null;
       if (isDisplay) {
@@ -183,9 +171,16 @@ function staticChecks() {
           walkCond(o.req, w2);
           walkCond(o.hide, w2);
         });
+        // 制限時間は直前の独立ノード {sec:n} で与えられることがある
+        const effSec = nd.sec != null ? nd.sec : (arr[i - 1] && arr[i - 1].sec);
         // 制限時間つきなのに timeout 指定が無い場合、表示末尾が選ばれる（事故のもと）
-        if (nd.sec && !nd.ch.some(o => o.timeout)) {
-          fail(`sec:${nd.sec} があるのに timeout:1 の選択肢が無い (${where})`);
+        if (effSec && !nd.ch.some(o => o.timeout)) {
+          fail(`sec:${effSec} があるのに timeout:1 の選択肢が無い (${where})`);
+        }
+        // 制限時間が無いのに全選択肢が条件つきだと、条件を満たさないプレイヤーは
+        // 何も押せず進行不能になる。無条件の逃げ道が最低1つ要る。
+        if (!effSec && !nd.ch.some(o => !o.req && !o.hide)) {
+          fail(`sec が無く、全選択肢が req / hide つき。条件を満たさないと進行不能 (${where})`);
         }
       }
     });
@@ -215,6 +210,11 @@ function staticChecks() {
       }
     }
     arr.forEach((nd, i) => { if (nd.n && !seen.has(i)) fail(`到達不能なラベル ${ch}:${nd.n}`); });
+    // ラベルの付いていないノードも含めて、章の先頭からどれも到達できること
+    const deadNodes = arr.map((_, i) => i).filter(i => !seen.has(i));
+    if (deadNodes.length) {
+      fail(`到達不能なノード ${deadNodes.length} 件 (${ch}: index ${deadNodes.slice(0, 10).join(',')}${deadNodes.length > 10 ? ' …' : ''})`);
+    }
   }
 
   // --- 参照だけされて一度も立たないフラグ ---
@@ -417,8 +417,6 @@ function playOnce(policy, seed, G) {
   return { end, trace: p.trace, flags: { ...S.flags }, chars: S.chars, loop: S.loop };
 }
 
-function freshG() { return { loops: 0, endings: [], recs: [], stills: [] }; }
-
 /** ランダム多数試行で到達するENDを集計 */
 function rollouts(n, seed) {
   head(`■ 乱択ロールアウト（${n} 回 / seed ${seed}）`);
@@ -448,12 +446,12 @@ function seekRoutes(seed) {
     // 誰も救わない。切電・見送りを積極的に選ぶ
     BAD: {
       loops: 1,
-      policy: () => goalPolicy([], TRUE_FLAGS, -1, 0.2, 0)
+      policy: () => goalPolicy([], TRUE_FLAGS, -1, 0.2, 1)
     },
     // 現在の事件は収まるが真相は闇の中。灰堂特定はしない
     NORMAL: {
       loops: 1,
-      policy: () => goalPolicy(['JIN_RUSH_01', 'GER_KNIFE_01'], ['KAI_EXPOSE_01'], 1, 0.15, 0.3)
+      policy: () => goalPolicy(['JIN_RUSH_01', 'GER_KNIFE_01'], ['KAI_EXPOSE_01'], 1, 0.15, 1)
     },
     // 1周目では MUN_TEACH_02 が hide で出ないので、うまくいけば GOOD 止まり
     GOOD: {
@@ -465,9 +463,9 @@ function seekRoutes(seed) {
       loops: 2,
       policy: () => goalPolicy(TRUE_FLAGS.filter(f => f !== 'SEC_CALL_01'), ['SEC_CALL_01'], 1, 0.12, 1)
     },
-    // 2周目 + 隠し発信
+    // TRUE クリア後の周回で隠し発信 + 隠し録音を全回収。最短で3周
     SECRET: {
-      loops: 2,
+      loops: 3,
       policy: () => goalPolicy(TRUE_FLAGS, [], 1, 0.12, 1)
     }
   };
