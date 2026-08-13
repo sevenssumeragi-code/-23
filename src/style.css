@@ -174,3 +174,6 @@ td.t{color:var(--dim);white-space:nowrap;font-size:11px;letter-spacing:.1em}
   #choices{padding:0 16px 14px}
   header .clock{font-size:18px}
 }
+
+/* メモの〈信じる／疑う〉札（追補 §2） */
+.tools button.on{ border-color:var(--amber); color:var(--amber); }

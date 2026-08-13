@@ -30,8 +30,12 @@ let S, G;
 /* UI 側フック。engine.js が実装を差し込む。
    Node での検証時は既定の no-op のまま使う。 */
 const Hooks = {
-  par(){}, meet(){}, memo(){}, evd(){}, vm(){}, rec(){}, tlfix(){}, toastx(){}
+  par(){}, meet(){}, memo(){}, evd(){}, vm(){}, rec(){}, tlfix(){}, toastx(){},
+  vmLost(){}, shift(){}, hold(){}, resume(){}, noise(){}
 };
+
+/* 勤務時間 22:00〜04:00 ＝ 360分。追補 §6-1 */
+const SHIFT_END = 28 * 60;
 
 function newChar(){ return {trust:20,doubt:0,fear:0,stress:0,state:'安定',life:'生存',known:[]}; }
 function newState(loopCarry){
@@ -45,7 +49,8 @@ function newState(loopCarry){
       {d:'　　　　　　',t:'（　　　　　　　　　　　　　　　）'},
       {d:'2週間前',t:'市内で若者の失踪が相次ぐ。'}
     ],
-    rel:[], vm:[], hist:[], recs:[], stills:[], cur:null, callStart:null
+    rel:[], vm:[], hist:[], recs:[], stills:[], cur:null, callStart:null,
+    held:null, overNoted:0, dialLog:{}
   };
 }
 function setState(s){ S = s; }
@@ -56,6 +61,60 @@ const SET= (k,v=1) => { S.flags[k]=v; };
 const CNT= k => S.flags[k]|0;
 
 function clockStr(m){ m = ((m%1440)+1440)%1440; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+
+/* ---------- 通話時間の資源性（追補 §6） ---------- */
+function timeLeft(){ return Math.max(0, SHIFT_END - S.clock); }
+/* 超過した夜ごとに疲労が1段。最大4段＝制限時間が約半分になる */
+function fatigue(){ return Math.min(4, CNT('OVERTIME')); }
+function realSec(sec){ return Math.max(5, Math.round(sec * (1 - 0.12 * fatigue()))); }
+/* 04:00 を跨いだ最初の一回だけ OVERTIME を加算する */
+function checkShift(){
+  if(timeLeft() > 0){ S.overNoted = 0; return false; }
+  if(S.overNoted) return false;
+  S.overNoted = 1;
+  SET('OVERTIME', CNT('OVERTIME') + 1);
+  Hooks.shift();
+  return true;
+}
+
+/* ---------- 保留（追補 §6-3） ----------
+   待たされた側は、待たされた分数に比例して削れる。 */
+function holdLine(c){ S.held = {c, since:S.clock}; Hooks.hold(c); }
+function resumeLine(){
+  if(!S.held) return 0;
+  const min = Math.max(1, S.clock - S.held.since), c = S.held.c;
+  applyPar({c, fear:Math.round(min*1.2), stress:Math.round(min*0.9), trust:-Math.round(min*0.3)});
+  S.held = null;
+  Hooks.resume(min, c);
+  return min;
+}
+
+/* ---------- 留守番電話の保存期限（追補 §5-1） ----------
+   記録媒体は二晩ぶん。当夜と翌夜は残り、三晩目に上書きされる。
+   聞かないまま消えたぶんは VM_MISS に累積し、発信者ごとの代償が入る。 */
+function expireVM(){
+  let lost = 0;
+  S.vm.forEach(v=>{
+    if(v.played || v.dead) return;
+    if(S.day - v.d < 2) return;
+    v.dead = 1; lost++;
+    SET('VM_MISS', CNT('VM_MISS') + 1);
+    if(v.k) SET('VM_LOST_'+v.k);
+    if(v.pen) applyPar(v.pen);
+  });
+  if(!lost) return 0;
+  const n = CNT('VM_MISS');
+  // 累積の代償：個別の損失とは別に、部屋の空気そのものが劣化する（追補 §5-3）
+  if(n === 3){
+    TRACKED.forEach(k=>{ if(S.chars[k].life==='生存') applyPar({c:k, stress:6, doubt:5}); });
+  }
+  if(n >= 5){
+    applyPar({c:'MUN', fear:12, doubt:8});
+    S.noise = Math.min(3, S.noise + 1); Hooks.noise();
+  }
+  Hooks.vmLost(lost, n);
+  return lost;
+}
 
 /* ---------- 条件評価 ----------
    上から最初に一致したキーだけを見て返す（複数キー併記は先勝ち）。 */
@@ -68,6 +127,11 @@ function cond(c){
   if(c.cnt) return CNT(c.cnt[0]) >= c.cnt[1];
   if(c.tr)  return S.chars[c.tr[0]].trust >= c.tr[1];
   if(c.dbt) return S.chars[c.dbt[0]].doubt >= c.dbt[1];
+  if(c.ndbt) return S.chars[c.ndbt[0]].doubt <  c.ndbt[1];  // 疑念が閾値未満（追補 §1-2）
+  if(c.mb)   return F('MB_'+c.mb);                          // メモに〈信じる〉札（追補 §2）
+  if(c.md)   return F('MD_'+c.md);                          // メモに〈疑う〉札
+  if(c.time) return timeLeft() >= c.time;                   // 残り通話時間（追補 §6-1）
+  if(c.held) return !!S.held;                               // 保留中の回線がある
   if(c.alive) return S.chars[c.alive].life === '生存';
   if(c.loop)  return S.loop >= c.loop;
   if(c.recs)  return (G.recs||[]).length >= c.recs;      // 裏を暴いた録音の累計（周回跨ぎ）
@@ -96,12 +160,15 @@ function applyData(nd){
   if(nd.meet){ SET('MET_'+nd.meet); const c = S.chars[nd.meet]; if(c) c.known = nd.known||[]; Hooks.meet(); }
   if(nd.know){ const c = S.chars[nd.know[0]]; if(c && !c.known.includes(nd.know[1])) c.known.push(nd.know[1]); }
   if(nd.life){ S.chars[nd.life[0]].life = nd.life[1]; applyPar({c:nd.life[0]}); }
-  if(nd.memo){ S.memo.push({d:S.day, t:nd.memo[0], x:nd.memo[1]}); Hooks.memo(nd.memo[0]); }
+  // memo[2] があると〈信じる／疑う〉の札を付けられるキー付きメモになる（追補 §2）
+  if(nd.memo){ S.memo.push({d:S.day, t:nd.memo[0], x:nd.memo[1], k:nd.memo[2]||null, mark:null}); Hooks.memo(nd.memo[0]); }
   if(nd.evd){ S.evd.push({t:nd.evd[0], x:nd.evd[1]}); Hooks.evd(nd.evd[0]); }
   if(nd.tl){ S.tl.push({d:nd.tl[0], t:nd.tl[1]}); }
   if(nd.tlfix){ const e = S.tl[1]; e.d = nd.tlfix[0]; e.t = nd.tlfix[1]; Hooks.tlfix(); }
   if(nd.rel){ S.rel.push({a:nd.rel[0], t:nd.rel[1], b:nd.rel[2], dot:nd.rel[3]}); }
-  if(nd.vm){ S.vm.push({d:S.day, c:clockStr(S.clock), w:nd.vm[0], x:nd.vm[1]}); Hooks.vm(); }
+  // vm[2]=キー / vm[3]=発信者 / vm[4]=上書きされた場合のペナルティ（追補 §5-2）
+  if(nd.vm){ S.vm.push({d:S.day, c:clockStr(S.clock), w:nd.vm[0], x:nd.vm[1],
+      k:nd.vm[2]||null, who:nd.vm[3]||null, pen:nd.vm[4]||null, played:0, dead:0}); Hooks.vm(); }
   if(nd.rec){ S.recs.push({id:nd.rec.id, day:S.day, ti:nd.rec.ti, tx:nd.rec.tx, hid:nd.rec.hid, flag:nd.rec.flag,
       opened:(G.recs||[]).includes(nd.rec.id)?1:0}); Hooks.rec(); }
   if(nd.toastx){ Hooks.toastx(); }
@@ -110,7 +177,21 @@ function applyData(nd){
 /* 時刻・日付の変更（DOM 更新は呼び出し側の責務） */
 function applyTime(nd){
   if(nd.clock){ const [h,m] = nd.clock.split(':').map(Number); S.clock = h*60+m; }
-  if(nd.day){ S.day = nd.day; S.clock = 22*60; }
+  if(nd.day){
+    const prev = S.day;
+    S.day = nd.day; S.clock = 22*60; S.overNoted = 0;
+    if(S.day > prev) expireVM();   // 夜が明けるたびに古い留守電が上書きされる
+  }
+}
+
+/* ---------- メモの札（追補 §2） ----------
+   同じ札をもう一度押すと保留（未記入）に戻る。札は相手には見えない。 */
+function markMemo(m, v){
+  if(!m || !m.k) return;
+  delete S.flags['MB_'+m.k]; delete S.flags['MD_'+m.k];
+  m.mark = (m.mark === v) ? null : v;
+  if(m.mark === 'b') SET('MB_'+m.k);
+  if(m.mark === 'd') SET('MD_'+m.k);
 }
 
 /* ---------- 選択肢の状態変更 ---------- */

@@ -54,13 +54,15 @@ const NODE_KEYS = new Set([
   'still', 'card', 'chapTitle', 'wait',
   'set', 'inc', 'par', 'meet', 'known', 'know', 'life', 'memo', 'evd',
   'tl', 'tlfix', 'rel', 'vm', 'rec', 'toastx',
-  'ch', 'sec', 'go', 'if', 'then', 'go2', 'els', 'chap', 'end', 'clear'
+  'ch', 'sec', 'go', 'if', 'then', 'go2', 'els', 'chap', 'end', 'clear',
+  'multi', 'miss', 'hold', 'resume', 'min'
 ]);
 const CHOICE_KEYS = new Set([
   't', 'tag', 'line', 'say', 'silent', 'req', 'hide', 'eff', 'set', 'inc',
   'memo', 'cost', 'timeout', 'go'
 ]);
-const COND_KEYS = new Set(['and', 'or', 'f', 'nf', 'cnt', 'tr', 'dbt', 'alive', 'loop', 'recs', 'cleared']);
+const COND_KEYS = new Set(['and', 'or', 'f', 'nf', 'cnt', 'tr', 'dbt', 'ndbt', 'mb', 'md',
+  'time', 'held', 'alive', 'loop', 'recs', 'cleared']);
 const LIFE_VALUES = new Set(['生存', '危篤', '死亡', '消失']);
 
 function staticChecks() {

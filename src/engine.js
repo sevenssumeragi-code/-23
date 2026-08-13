@@ -73,7 +73,10 @@ const AU = {
 
 /* ---------- 画面ヘルパ ---------- */
 function refreshHead(){
-  $('#hDay').textContent = 'DAY '+String(S.day).padStart(2,'0');
+  const tl = timeLeft(), fg = fatigue();
+  $('#hDay').innerHTML = 'DAY '+String(S.day).padStart(2,'0') +
+    `<span style="margin-left:10px;color:${tl<=45?'#c4443a':tl<=120?'#f0c674':'#8792a2'}">残 ${tl}分</span>` +
+    (fg?`<span style="margin-left:8px;color:#c4443a">疲労 ${'●'.repeat(fg)}</span>`:'');
   $('#hClock').textContent = clockStr(S.clock);
   $('#hChap').textContent = S.chapTitle.split(' ')[0] + (S.loop>1?'　周回'+S.loop:'');
   const nm = ['回線良好','微弱な雑音','二重音声を検知','境界接近 — 回線不安定'][S.noise];
@@ -160,14 +163,15 @@ function renderAside(){
 /* ---------- 資料パネル ---------- */
 const PANELS = [
   ['memo','相談メモ'],['rel','人物相関図'],['tl','事件年表'],['evd','証拠一覧'],
-  ['rec','録音再生'],['hist','通話履歴'],['vm','留守番電話'],['prof','相談者プロフィール'],
+  ['rec','録音再生'],['hist','通話履歴'],['vm','留守番電話'],['dial','折り返し発信'],['prof','相談者プロフィール'],
   ['still','スチル'],['flag','フラグ確認'],['sys','セーブ / 周回']
 ];
 function renderNav(){
   let h = '<h4>相談ファイル</h4>';
   PANELS.forEach(([k,t])=>{
     let badge = '';
-    if(k==='vm' && S.vm.some(v=>!v.played)) badge = '<span class="badge">●</span>';
+    if(k==='vm'){ const n = S.vm.filter(v=>!v.played && !v.dead).length;
+      if(n) badge = `<span class="badge">${n}</span>`; }
     if(k==='rec'&& S.recs.some(r=>!r.played)) badge = '<span class="badge">●</span>';
     h += `<button data-p="${k}">${t}${badge}</button>`;
   });
@@ -183,7 +187,12 @@ function openPanel(k){
   bindPanel(k);
 }
 const PANEL_HTML = {
-  memo: () => S.memo.length ? S.memo.map(m=>`<div class="card"><div class="d">DAY ${m.d}</div><h5>${m.t}</h5><p>${m.x}</p></div>`).join('')
+  memo: () => S.memo.length ? S.memo.map((m,i)=>`<div class="card"><div class="d">DAY ${m.d}${
+          m.mark==='b'?'　<span style="color:#7fd3a0">〈信じる〉</span>':m.mark==='d'?'　<span style="color:#c4443a">〈疑う〉</span>':''
+        }</div><h5>${m.t}</h5><p>${m.x}</p>${
+          m.k?`<div class="tools"><button data-mk="${i}" data-v="b"${m.mark==='b'?' class="on"':''}>信じる</button>
+          <button data-mk="${i}" data-v="d"${m.mark==='d'?' class="on"':''}>疑う</button></div>`:''
+        }</div>`).join('')
         : '<p class="empty">まだ書き留めたことはない。<br>通話中の言葉は、聞き逃せば二度と戻らない。</p>',
   rel:  () => S.rel.length ? '<div class="rel">'+S.rel.map(r=>`<div class="rel ${r.dot?'dot':''}">${r.dot?'┈┈':'──'} <b>${r.a}</b> ${r.t} <b>${r.b}</b></div>`).join('')+'</div>'
         : '<p class="empty">線はまだ一本も引かれていない。</p>',
@@ -197,9 +206,27 @@ const PANEL_HTML = {
         : '<p class="empty">録音はまだない。<br>通話はすべて自動で記録される。</p>',
   hist: () => S.hist.length ? '<table>'+S.hist.map(e=>`<tr><td class="t">D${e.d} ${e.c}</td><td>${e.w}<br><span style="color:#8792a2;font-size:11px">${e.len} ／ ${e.r}</span></td></tr>`).join('')+'</table>'
         : '<p class="empty">履歴なし。</p>',
-  vm:   () => S.vm.length ? S.vm.map((v,i)=>`<div class="card"><div class="d">DAY ${v.d} ${v.c}</div><h5>${v.w}</h5>
-        <p>${v.played ? v.x : '未再生'}</p><div class="tools"><button data-vm="${i}">再生する</button></div></div>`).join('')
-        : '<p class="empty">新しいメッセージはありません。</p>',
+  vm:   () => {
+        const miss = CNT('VM_MISS');
+        const head = miss ? `<p class="empty" style="color:#c4443a;margin-bottom:12px">上書きされて消えたメッセージ：${miss}件</p>` : '';
+        if(!S.vm.length) return head + '<p class="empty">新しいメッセージはありません。</p>';
+        return head + S.vm.map((v,i)=>{
+          const left = 1 - (S.day - v.d);   // 当夜=1, 翌夜=0, それ以降は消える
+          const st = v.dead ? '<span style="color:#5f6b7c">上書き済み — 再生できません</span>'
+            : v.played ? v.x
+            : `未再生${left<=0?'<span style="color:#c4443a">　※次の夜で上書きされます</span>':''}`;
+          return `<div class="card"><div class="d">DAY ${v.d} ${v.c}</div><h5>${v.w}</h5><p>${st}</p>${
+            v.dead||v.played?'':`<div class="tools"><button data-vm="${i}">再生する</button></div>`}</div>`;
+        }).join('');
+        },
+  dial: () => {
+        const open = DIALS.filter(d=>d.open());
+        if(!open.length) return '<p class="empty">折り返せる番号は、まだ一つもない。</p>';
+        return `<p class="empty" style="margin-bottom:12px">発信も通話時間を使う。残 ${timeLeft()}分。</p>` +
+          open.map(d=>`<div class="card"><h5>${d.label}<span style="color:#8792a2;font-size:11px">　${d.num}</span></h5>
+          ${(S.dialLog||{})[d.id]?`<p>${S.dialLog[d.id]}</p>`:'<p style="color:#5f6b7c">未発信</p>'}
+          <div class="tools"><button data-dial="${d.id}">この番号にかける</button></div></div>`).join('');
+        },
   prof: () => TRACKED.filter(k=>F('MET_'+k)).map(k=>{
         const c = S.chars[k], m = CHARS[k];
         return `<div class="card"><h5 style="color:${m.col}">${m.name}<span style="color:#8792a2;font-size:11px">　${m.sub}</span></h5>
@@ -224,7 +251,19 @@ const PANEL_HTML = {
 };
 function bindPanel(k){
   $$('#pBody [data-rec]').forEach(b=>b.onclick=()=>playRec(+b.dataset.rec, b.dataset.md));
-  $$('#pBody [data-vm]').forEach(b=>b.onclick=()=>{ const v=S.vm[+b.dataset.vm]; v.played=1; AU.noise(.3,.03); openPanel('vm'); renderNav(); });
+  $$('#pBody [data-vm]').forEach(b=>b.onclick=()=>{
+    const v=S.vm[+b.dataset.vm];
+    if(v.dead) return;
+    v.played=1; AU.noise(.3,.03);
+    // 聞いてもらえた、という事実そのものが相手に届く（追補 §5-1）
+    if(v.who && S.chars[v.who]) applyPar({c:v.who, trust:3, doubt:-5});
+    if(v.k) SET('VM_'+v.k);
+    openPanel('vm'); renderNav(); renderAside(); saveAll();
+  });
+  $$('#pBody [data-mk]').forEach(b=>b.onclick=()=>{
+    markMemo(S.memo[+b.dataset.mk], b.dataset.v); AU.click(); openPanel('memo'); saveAll();
+  });
+  $$('#pBody [data-dial]').forEach(b=>b.onclick=()=>{ AU.click(); dial(b.dataset.dial); });
   $$('#pBody [data-still]').forEach(b=>b.onclick=()=>showStill(b.dataset.still));
   $$('#pBody [data-sys]').forEach(b=>b.onclick=()=>{ if(b.dataset.sys==='save'){ saveAll(); b.textContent='保存しました'; } else location.reload(); });
 }
@@ -275,6 +314,54 @@ Hooks.rec   = () => { renderNav(); toast('通話を録音しました'); };
 Hooks.tlfix = () => toast('事件年表の空白が埋まった。');
 Hooks.toastx= () => { const n = ['MUN_TEACH_01','MUN_TEACH_02','MUN_TEACH_03'].filter(F).length;
                       toast('ムニに教えたこと '+n+' / 3'); };
+Hooks.noise = () => refreshHead();
+Hooks.shift = () => {
+  if(CNT('OVERTIME') >= 2) toast('疲労が溜まっている。判断できる時間が短くなった。');
+  pushLine('午前四時。勤務時間は終了した。<br>それでも受話器を置けないなら、置かないでいい。ただし、明日の夜のあなたは、今夜より少し疲れている。','sys');
+  AU.beep(300,.9,.03,'sine'); refreshHead();
+};
+Hooks.vmLost = (lost, n) => {
+  pushLine(`留守番電話 ${lost}件が、新しい着信に上書きされた。<br>——聞かないまま消えたメッセージ：累計 ${n}件`,'sys');
+  AU.beep(140,.7,.045,'sawtooth'); toast('未再生の留守電が上書きされました');
+  if(n === 3) pushLine('この部屋には、聞かれなかった声が溜まっていく。<br>受話器を取っても、相手が本題に入るまでの時間が、少しずつ長くなった。','nar');
+  if(n >= 5) pushLine('無言の着信が増えた。取っても、誰も喋らない。<br>——ただ、切る直前に、いつも同じ雨音がする。','nar');
+  renderNav(); renderAside(); refreshHead();
+};
+Hooks.hold   = () => {
+  $('#cMeta').textContent = (S.cur?S.cur.num:'') + ' ／ 保留中';
+  AU.beep(660,.2,.02,'triangle'); setTimeout(()=>AU.beep(880,.2,.02,'triangle'),220);
+  pushLine('回線を保留にした。保留音——オルゴールの、あの曲。','sys');
+};
+Hooks.resume = (min) => {
+  $('#cMeta').textContent = (S.cur?S.cur.num:'') + ' ／ 通話中';
+  pushLine(`保留 ${min}分。待たされた側の呼吸が、変わっている。`,'sys');
+  renderAside();
+};
+
+/* ---------- 折り返し発信（追補 §3） ---------- */
+function dial(id){
+  const d = DIALS.find(x=>x.id===id); if(!d) return;
+  S.dialLog = S.dialLog || {};
+  if(timeLeft() <= 0){
+    S.dialLog[id] = '——交換台はもう夜勤明けだ。外線は朝まで繋がらない。';
+    openPanel('dial'); return;
+  }
+  const r = d.resp();
+  S.dialLog[id] = r.log;
+  S.hist.push({d:S.day, c:clockStr(S.clock), w:'（発信）'+d.label, len:(r.len||1)+'分', r:r.result});
+  S.clock += (r.len||1);
+  if(r.ring==='none') AU.beep(180,.6,.03,'square');
+  else if(r.ring==='old') AU.ring('old');
+  else { AU.beep(520,.25,.03,'sine'); setTimeout(()=>AU.beep(520,.25,.03,'sine'),600); }
+  if(r.noise!=null) setNoise(r.noise);
+  if(r.set) Object.entries(r.set).forEach(([k,v])=>SET(k,v));
+  if(r.par) applyPar(r.par);
+  if(r.memo) S.memo.push({d:S.day,t:r.memo[0],x:r.memo[1],k:r.memo[2]||null,mark:null});
+  if(r.evd) S.evd.push({t:r.evd[0], x:r.evd[1]});
+  if(r.toast) toast(r.toast);
+  refreshHead(); checkShift(); renderNav(); renderAside(); saveAll();
+  if(r.still) unlockStill(r.still, ()=>openPanel('dial')); else openPanel('dial');
+}
 
 /* ---------- 実行 ---------- */
 function loadChapter(id, startLabel){
@@ -301,7 +388,7 @@ function exec(nd){
   // --- 表示系(ここで実行を中断する。同一ノードの他のキーは評価されない) ---
   if(nd.say!=null){
     const m = CHARS[nd.c] || CHARS.UNK;
-    S.clock += 1; refreshHead();
+    S.clock += (nd.min || 1); refreshHead(); checkShift();
     wv.col = m.col;
     const el = pushLine(`<span class="nm" style="color:${m.col}">${nd.nm||m.name}</span>`, nd.w?'wsp':'');
     running = true;
@@ -341,6 +428,9 @@ function exec(nd){
   if(nd.card){ showChapCard(nd.card); return; }
   if(nd.wait){ setTimeout(step, nd.wait); return; }
   // --- 制御系 ---
+  if(nd.hold){ holdLine(nd.hold); }
+  if(nd.resume){ resumeLine(); }
+  if(nd.multi){ showMulti(nd); return; }
   if(nd.ch){ showChoices(nd); return; }
   const target = resolveJump(nd); if(target) jump(target);
   if(nd.chap){ saveAll(); loadChapter(nd.chap); $('#text').innerHTML=''; step(); return; }
@@ -380,14 +470,58 @@ function showChoices(nd){
     const ok = cond(o.req);
     const b = document.createElement('button');
     b.className = 'cbtn' + (o.silent?' silent':'') + (ok?'':' lock') + (o.hide?' hid':'');
-    b.innerHTML = (o.tag?`<span class="tag">${o.tag}</span>`:'') + o.t + (ok?'':' <span class="tag">— まだ言葉が見つからない</span>');
+    const cost = o.cost || 2;
+    b.innerHTML = (o.tag?`<span class="tag">${o.tag}</span>`:'') + o.t +
+      (cost >= 5 ? ` <span class="tag" style="color:#c4443a">— ${cost}分</span>` : '') +
+      (ok?'':' <span class="tag">— まだ言葉が見つからない</span>');
     b.onclick = ()=>{ if(!ok) return; AU.click(); pick(o, nd); };
     box.appendChild(b);
   });
   const sec = nd.sec != null ? nd.sec : pendingSec;
   pendingSec = null;
-  if(sec) startTimer(sec, ()=>{ // 制限時間切れ = 沈黙してしまった
+  if(sec) startTimer(realSec(sec), ()=>{ // 制限時間切れ = 沈黙してしまった
     pick(timeoutChoice(nd), nd, true);
+  });
+}
+
+/* ---------- 同時着信（追補 §6-2） ----------
+   取れるのは一本だけ。取らなかった回線はその場で留守電に落ち、
+   §5 の保存期限ルールにそのまま接続する。 */
+function showMulti(nd){
+  const box = $('#choices'); box.innerHTML = ''; $('#next').style.display='none';
+  pushLine('複数の回線が同時に鳴っています。取れるのは一本です。','sys');
+  AU.ring('normal'); setTimeout(()=>AU.ring('normal'), 300);
+  const drop = (taken)=> nd.multi.forEach(x=>{
+    if(x === taken) return;
+    if(x.vm) applyData({vm:x.vm});
+    if(x.skip) applyPar(x.skip);
+  });
+  nd.multi.forEach((o,i)=>{
+    const b = document.createElement('button');
+    b.className = 'cbtn';
+    b.innerHTML = `<span class="tag">回線 ${i+1}</span>${o.label}` +
+      (o.note?`<span class="tag" style="display:block;margin:4px 0 0">${o.note}</span>`:'');
+    b.onclick = ()=>{
+      clearInterval(tmr); $('#timer').style.transform='scaleX(0)';
+      AU.click(); box.innerHTML = '';
+      drop(o);
+      pushLine(`回線${i+1}に応答。他の回線は留守番電話に転送された。`,'sys');
+      renderNav(); renderAside(); saveAll();
+      if(o.go) jump(o.go);
+      step();
+    };
+    box.appendChild(b);
+  });
+  const sec = nd.sec != null ? nd.sec : pendingSec;
+  pendingSec = null;
+  if(sec) startTimer(realSec(sec), ()=>{   // 迷っているうちに、どちらも切れる
+    box.innerHTML = '';
+    drop(null);
+    pushLine('迷っているあいだに、どちらの呼び出し音も止まった。','sys');
+    SET('MULTI_MISS', CNT('MULTI_MISS')+1);
+    renderNav(); renderAside();
+    if(nd.miss) jump(nd.miss);
+    step();
   });
 }
 function startTimer(sec, cb){
@@ -405,7 +539,7 @@ function pick(o, nd, timedout){
   $('#choices').innerHTML = '';
   if(o.say!==false && o.t) pushLine(`<span class="nm">あなた</span>${timedout?'（沈黙した）':(o.line||o.t)}`, 'me');
   applyChoice(o);
-  refreshHead(); renderAside();
+  refreshHead(); checkShift(); renderAside();
   if(o.go){ jump(o.go); }
   saveAll();
   step();

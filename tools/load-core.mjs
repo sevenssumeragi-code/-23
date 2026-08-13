@@ -15,7 +15,7 @@ const SRC = join(resolve(dirname(fileURLToPath(import.meta.url)), '..'), 'src');
 
 /** src/index.html の読み込み順と一致させること */
 export const CORE_FILES = [
-  'data/stills.js', 'data/endings.js', 'scenario/_init.js',
+  'data/stills.js', 'data/endings.js', 'data/dials.js', 'scenario/_init.js',
   'scenario/pro.js', 'scenario/ch1.js', 'scenario/ch2.js', 'scenario/ch3.js',
   'scenario/ch4.js', 'scenario/ch5.js', 'scenario/fin.js',
   'core.js'
@@ -30,6 +30,8 @@ export function loadApi() {
     STILLS, ENDINGS, SCENARIO, CHARS, TRACKED, Hooks,
     newState, setState, setGlobal, cond, applyPar, applyData, applyTime,
     applyChoice, visibleChoices, selectableChoices, timeoutChoice, resolveJump, judge,
+    timeLeft, fatigue, realSec, checkShift, holdLine, resumeLine, expireVM, markMemo,
+    clockStr, SHIFT_END, DIALS,
     F, SET, CNT, getS: () => S, getG: () => G
   };`, ctx);
   return ctx.__api;
