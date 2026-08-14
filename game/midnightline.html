@@ -184,6 +184,10 @@ td.t{color:var(--dim);white-space:nowrap;font-size:11px;letter-spacing:.1em}
 
 /* メモの〈信じる／疑う〉札（追補 §2） */
 .tools button.on{ border-color:var(--amber); color:var(--amber); }
+
+/* 着信圧の兆候（追補 §7-5）。数値は出さず、言葉だけで伝える */
+.pc .warn1{ margin-top:6px; font-size:11px; letter-spacing:.08em; color:#9c7c3c; }
+.pc .warn2{ margin-top:6px; font-size:11px; letter-spacing:.08em; color:#c4443a; }
 </style>
 </head>
 <body>
@@ -765,9 +769,38 @@ SCENARIO.ch1 = [
  {nar:'相談メモを一枚めくる。紙が擦れる音。それだけで、この部屋には他に音がないのだと分かってしまう。'},
  {sys:'本日の申し送り：特記事項なし。<br>前任者の引き継ぎ書は、見つかっていません。'},
  {nar:'ロッカーの名札枠は、今夜も空のままだ。四角い日焼け跡が、そこに誰かがいたことだけを主張している。'},
+ /* 追補 §7-2: 着信圧が30以上だと、この夜レニィはかけてこない。
+    待つと LEN_333 / LEN_PHONE_HINT を丸ごと失う。 */
+ {if:{silent:['LEN',30]}, then:'d2_silent'},
  {ring:'normal'},
  {sys:'着信 — 23:12'},
  {ch:[{t:'受話器を取る',tag:'受電',go:'d2_len'}]},
+
+ {n:'d2_silent'},
+ {clock:'23:12'},
+ {nar:'二十三時十二分。'},
+ {nar:'昨夜、彼が掛けてきた時刻だ。'},
+ {nar:'——鳴らない。'},
+ {nar:'二十三時半。零時。電話機のランプは点いたまま、一度も光らない。'},
+ {nar:'昨夜の通話を思い返す。こちらの相槌は、短かっただろうか。'},
+ {sec:20},
+ {ch:[
+  {t:'こちらから、レニィにかけてみる',tag:'発信',cost:12,req:{time:12},
+   eff:{'LEN.stress':-14,'LEN.trust':8,'LEN.doubt':-10},set:{LEN_CALLBACK:1},
+   go:'d2_len',line:'（受話器を上げ、080-XXXX-2213 を押した）'},
+  {t:'……向こうから掛けてくるのを待つ',tag:'保留',cost:2,
+   eff:{'LEN.stress':6},set:{LEN_D2_LOST:1},go:'d2_lost'},
+  {t:'（何もしないまま、夜が過ぎた）',tag:'沈黙',silent:1,timeout:1,
+   eff:{'LEN.stress':6},set:{LEN_D2_LOST:1},go:'d2_lost'}
+ ]},
+
+ {n:'d2_lost'},
+ {nar:'その夜、レニィからの着信は無かった。'},
+ {nar:'相談員は、待つ仕事ではある。'},
+ {nar:'——待つことと、何もしないことは、違うのだけれど。'},
+ {vm:['留守番電話 1件（無言）','発信元表示なし。12秒。息の音だけ。<br>切れる直前、遠くで雨の音。','len_d2_lost',null,null]},
+ {memo:['鳴らなかった夜','二日目、レニィからの着信は無かった。無言の留守電が一件だけ残った。']},
+ {go:'d2_after'},
 
  {n:'d2_len'},
  {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
@@ -996,6 +1029,8 @@ SCENARIO.ch1 = [
  {hang:'相手側が切電',hangKind:'normal'},
  {par:{c:'LEN',trust:3}},
  {noise:0},
+
+ {n:'d2_after'},          /* 着信圧でレニィが掛けてこなかった場合の合流先 */
  {clock:'01:40'},
  {nar:'それから二時間、着信はなかった。'},
  {nar:'あなたは通話メモを清書し、コーヒーを淹れ、二口飲んで冷ましすぎた。'},
@@ -1605,9 +1640,38 @@ SCENARIO.ch2 = [
  {nar:'三件。二週間で三件。この規模の街では、多い。'},
  {nar:'相談室に入ると、机の上に前夜の留守電の一覧が印字されて置かれていた。'},
  {nar:'無言着信の欄だけ、行がやけに詰まっている。'},
+ /* 追補 §7-2: 着信圧が28以上だと、ジンパチはかけてこない。
+    待つとカナタの録音（EVD_KAI_STEP2）と波形照合を丸ごと失う。
+    §7-3 のとおり、前夜の留守電を聞き逃していると信頼が下がった状態で判定に入る。 */
+ {if:{silent:['JIN',28]}, then:'jin_silent'},
  {ring:'normal'},
  {sys:'着信 — 22:35'},
  {ch:[{t:'受話器を取る',tag:'受電',go:'jin1'}]},
+
+ {n:'jin_silent'},
+ {clock:'22:35'},
+ {nar:'二十二時三十五分。留守電の主が、名乗ってくるはずの時刻。'},
+ {nar:'鳴らない。'},
+ {nar:'前夜のメッセージは「信じてもらえないんすけど」で始まっていた。'},
+ {nar:'——信じてもらえない前提で掛けてくる人間は、二度目を掛けない。'},
+ {sec:20},
+ {ch:[
+  {t:'留守電に残っていた番号へ、こちらから発信する',tag:'発信',cost:15,req:{time:15},
+   eff:{'JIN.stress':-15,'JIN.trust':12,'JIN.doubt':-12},set:{JIN_CALLBACK:1},
+   go:'jin1',line:'（090-XXXX-4408。呼び出し音、二回で繋がった）'},
+  {t:'……いたずらだったのかもしれない',tag:'保留',cost:2,
+   eff:{'JIN.stress':8},set:{JIN_D5_LOST:1},go:'jin_lost'},
+  {t:'（番号を控えたまま、掛けなかった）',tag:'沈黙',silent:1,timeout:1,
+   eff:{'JIN.stress':8},set:{JIN_D5_LOST:1},go:'jin_lost'}
+ ]},
+
+ {n:'jin_lost'},
+ {nar:'その夜、あの声は掛けてこなかった。'},
+ {nar:'翌朝の新聞に、四人目の失踪が載る。'},
+ {nar:'記事の中の名前を、あなたは知らない。'},
+ {nar:'——知る機会は、昨夜あった。'},
+ {memo:['掛けてこなかった声','前夜に留守電を残した男性は、二度と掛けてこなかった。']},
+ {go:'d5_news'},
 
  {n:'jin1'},
  {call:{who:'発信者(男性・若い)',c:'JIN',num:'090-XXXX-4408'}},
@@ -2281,9 +2345,37 @@ SCENARIO.ch3 = [
  {nar:'相談室の机には、あなたが並べた紙が増えている。'},
  {nar:'無言着信の一覧。波形の写し。留守電の書き起こし。'},
  {nar:'——どれも、繋がりそうで、あと一本足りない。'},
+ /* 追補 §7-2: 着信圧が32以上だと、ヒュウはかけてこない。
+    待つと右目・白い部屋・跛行の足音のすべて（HYU_EYE_01）を失う。 */
+ {if:{silent:['HYU',32]}, then:'hyu_silent'},
  {ring:'normal'},
  {sys:'着信 — 22:20'},
  {ch:[{t:'受話器を取る',tag:'受電',go:'hyu1'}]},
+
+ {n:'hyu_silent'},
+ {clock:'22:20'},
+ {nar:'二十二時二十分。'},
+ {nar:'昨夜の留守電は「私の右目の話を、してもよろしいでしょうか」で終わっていた。'},
+ {nar:'許可を求めて切れた声。返事は、まだしていない。'},
+ {nar:'——鳴らない。'},
+ {nar:'許可を求める人は、返事が無いことを、答えとして受け取る。'},
+ {sec:20},
+ {ch:[
+  {t:'こちらから折り返す。「その話を、聞かせてください」',tag:'発信',cost:18,req:{time:18},
+   eff:{'HYU.stress':-15,'HYU.trust':12,'HYU.doubt':-15,'HYU.fear':-10},set:{HYU_CALLBACK:1},
+   go:'hyu1',line:'（080-XXXX-6621。呼び出し音は、一回だけだった）'},
+  {t:'……気が向いたら、また掛けてくるだろう',tag:'保留',cost:2,
+   eff:{'HYU.stress':10},set:{HYU_D7_LOST:1},go:'hyu_lost'},
+  {t:'（返事をしないまま、夜が過ぎた）',tag:'沈黙',silent:1,timeout:1,
+   eff:{'HYU.stress':10},set:{HYU_D7_LOST:1},go:'hyu_lost'}
+ ]},
+
+ {n:'hyu_lost'},
+ {nar:'その夜、あの丁寧な声は掛けてこなかった。'},
+ {nar:'十年待っていた人が、もう一晩待つことにした。'},
+ {nar:'——あるいは、待つのをやめた。'},
+ {memo:['返事をしなかった夜','ヒュウの「右目の話をしてもよろしいでしょうか」に、返事をしないまま夜が明けた。']},
+ {go:'hyu6b'},
 
  {n:'hyu1'},
  {call:{who:'発信者(男性・丁寧)',c:'HYU',num:'080-XXXX-6621'}},
@@ -3752,9 +3844,36 @@ SCENARIO.ch5 = [
  {clock:'02:40'},
  {noise:2},
  {nar:'午前二時四十分。相談室には、あなたしかいない。'},
+ /* 追補 §7-2: 着信圧が50以上だと、囚われたレニィはこちらに掛けてこない。
+    LEN_REMEMBER と STORY_TRUE_KEY を失う＝TRUE の筋が切れる。 */
+ {if:{silent:['LEN',50]}, then:'len12_silent'},
  {ring:'normal'},
  {sys:'着信 — 02:40<br>番号：080-XXXX-2213（レニィ）'},
  {ch:[{t:'受話器を取る',tag:'受電',go:'len12'}]},
+
+ {n:'len12_silent'},
+ {nar:'鳴らない。'},
+ {nar:'跡地に行くと言った学生から、何の連絡もない。'},
+ {nar:'——この二週間、彼はこちらに掛けることを、少しずつやめていた。'},
+ {nar:'掛けてこなくなった理由に、心当たりが無いわけではない。'},
+ {sec:18},
+ {ch:[
+  {t:'レニィの携帯に発信する',tag:'発信',cost:12,req:{time:12},
+   eff:{'LEN.stress':-12,'LEN.trust':6},set:{LEN_CALLBACK12:1},
+   go:'len12',line:'（080-XXXX-2213。三回、四回——繋がった）'},
+  {t:'……ジンパチたちの連絡を待つ',tag:'保留',cost:2,
+   eff:{'LEN.stress':10},set:{LEN_D12_LOST:1},go:'len12_lost'},
+  {t:'（受話器を見つめたまま、何もしなかった）',tag:'沈黙',silent:1,timeout:1,
+   eff:{'LEN.stress':10},set:{LEN_D12_LOST:1},go:'len12_lost'}
+ ]},
+
+ {n:'len12_lost'},
+ {noise:3},
+ {nar:'朝まで、レニィの番号は鳴らなかった。'},
+ {nar:'こちらから掛けることも、しなかった。'},
+ {nar:'——十年前、この部屋で、同じ選択をした人がいる。'},
+ {memo:['掛けなかった夜','レニィが跡地にいた夜、こちらからも掛けなかった。']},
+ {go:'len_after'},
 
  {n:'len12'},
  {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
@@ -4834,6 +4953,17 @@ function expireVM(){
   return lost;
 }
 
+/* ---------- 着信圧（追補 §7） ----------
+   着信圧 = ストレス －（信頼 － 50）÷ 2
+   閾値以上になると、その夜その人からの着信は来ない。
+   信頼が高い相手はストレスが溜まっても粘ってかけてくる。
+   信頼が低い相手は、少しの負荷で離れる。 */
+function callPressure(k){
+  const c = S.chars[k]; if(!c) return 0;
+  if(c.life !== '生存') return 999;
+  return c.stress - (c.trust - 50) / 2;
+}
+
 /* ---------- 条件評価 ----------
    上から最初に一致したキーだけを見て返す（複数キー併記は先勝ち）。 */
 function cond(c){
@@ -4850,6 +4980,7 @@ function cond(c){
   if(c.md)   return F('MD_'+c.md);                          // メモに〈疑う〉札
   if(c.time) return timeLeft() >= c.time;                   // 残り通話時間（追補 §6-1）
   if(c.held) return !!S.held;                               // 保留中の回線がある
+  if(c.silent) return callPressure(c.silent[0]) >= c.silent[1]; // 着信圧が閾値以上＝今夜かけてこない（追補 §7）
   if(c.alive) return S.chars[c.alive].life === '生存';
   if(c.loop)  return S.loop >= c.loop;
   if(c.recs)  return (G.recs||[]).length >= c.recs;      // 裏を暴いた録音の累計（周回跨ぎ）
@@ -5151,7 +5282,13 @@ function renderAside(){
       <div class="lb">信頼 ${c.trust}</div>${bar(c.trust,'#f0c674')}
       <div class="lb">疑念 ${c.doubt}</div>${bar(c.doubt,'#8f7fc9')}
       <div class="lb">恐怖 ${c.fear}</div>${bar(c.fear,'#c4443a')}
-      <div class="lb">ストレス ${c.stress}</div>${bar(c.stress,'#5f8fa8')}</div>`;
+      <div class="lb">ストレス ${c.stress}</div>${bar(c.stress,'#5f8fa8')}${
+        // 追補 §7-5: 数値は見せず、言葉で警告する
+        c.life==='生存' ? (()=>{ const p = callPressure(k);
+          if(p >= 60) return '<div class="warn2">もう、かけてこないかもしれない</div>';
+          if(p >= 50) return '<div class="warn1">かけてくる回数が減っている</div>';
+          return ''; })() : ''
+      }</div>`;
   });
   if(h === '<h4>相談者の状態</h4>') h += '<p class="empty">まだ誰の声も聞いていない。</p>';
   a.innerHTML = h;

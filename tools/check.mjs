@@ -62,7 +62,7 @@ const CHOICE_KEYS = new Set([
   'memo', 'cost', 'timeout', 'go'
 ]);
 const COND_KEYS = new Set(['and', 'or', 'f', 'nf', 'cnt', 'tr', 'dbt', 'ndbt', 'mb', 'md',
-  'time', 'held', 'alive', 'loop', 'recs', 'cleared']);
+  'time', 'held', 'silent', 'alive', 'loop', 'recs', 'cleared']);
 const LIFE_VALUES = new Set(['生存', '危篤', '死亡', '消失']);
 
 function staticChecks() {
@@ -656,6 +656,44 @@ function playstyles(seed) {
   }
   if (reached) fail(`留守電を放置しても ${reached} に到達してしまう（§5-5 の設計と食い違う）`);
   else ok(`留守電を放置すると最善手でも ${[...best].join('・')} 止まり（GOOD に届かない）`);
+
+  // 4. 追補 §7-6: 最適プレイでは着信が途絶えず、冷淡なプレイでのみ途絶える
+  const LOST = ['LEN_D2_LOST', 'JIN_D5_LOST', 'HYU_D7_LOST', 'LEN_D12_LOST'];
+  const countLost = r => LOST.filter(f => r.flags[f]).length;
+
+  let bestLost = 99;
+  for (let i = 0; i < 40; i++) {
+    const G = freshG();
+    const r = playOnce(goalPolicy(TRUE_FLAGS.filter(f => f !== 'SEC_CALL_01'), [], 1, 0.12, 1),
+                       seed + i * 271, G);
+    bestLost = Math.min(bestLost, countLost(r));
+  }
+  if (bestLost === 0) ok('丁寧に聞く最適手では、着信が途絶える相手は出ない（誤爆しない）');
+  else fail(`最適手でも ${bestLost} 人の着信が途絶える＝閾値が厳しすぎる`);
+
+  // 冷淡に接する：ストレスを上げ、信頼を下げる手を選び続ける
+  const coldPolicy = () => ({
+    listen: () => true, listenVM: () => true,
+    pick(list) {
+      let best = list[0], bestScore = -Infinity;
+      for (const o of list) {
+        let sc = 0;
+        for (const [k, v] of Object.entries(o.eff || {})) {
+          if (k.endsWith('.stress')) sc += v;
+          if (k.endsWith('.trust'))  sc -= v;
+        }
+        if (sc > bestScore) { bestScore = sc; best = o; }
+      }
+      return best;
+    }
+  });
+  let coldMax = 0;
+  for (let i = 0; i < 40; i++) {
+    const G = freshG();
+    coldMax = Math.max(coldMax, countLost(playOnce(coldPolicy(), seed + i * 449, G)));
+  }
+  if (coldMax > 0) ok(`冷淡に接すると着信が途絶える（最大 ${coldMax} 人）`);
+  else fail('冷淡に接しても着信が一度も途絶えない＝着信圧が死んでいる');
 }
 
 /* ============================================================

@@ -154,7 +154,13 @@ function renderAside(){
       <div class="lb">信頼 ${c.trust}</div>${bar(c.trust,'#f0c674')}
       <div class="lb">疑念 ${c.doubt}</div>${bar(c.doubt,'#8f7fc9')}
       <div class="lb">恐怖 ${c.fear}</div>${bar(c.fear,'#c4443a')}
-      <div class="lb">ストレス ${c.stress}</div>${bar(c.stress,'#5f8fa8')}</div>`;
+      <div class="lb">ストレス ${c.stress}</div>${bar(c.stress,'#5f8fa8')}${
+        // 追補 §7-5: 数値は見せず、言葉で警告する
+        c.life==='生存' ? (()=>{ const p = callPressure(k);
+          if(p >= 60) return '<div class="warn2">もう、かけてこないかもしれない</div>';
+          if(p >= 50) return '<div class="warn1">かけてくる回数が減っている</div>';
+          return ''; })() : ''
+      }</div>`;
   });
   if(h === '<h4>相談者の状態</h4>') h += '<p class="empty">まだ誰の声も聞いていない。</p>';
   a.innerHTML = h;

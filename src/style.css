@@ -177,3 +177,7 @@ td.t{color:var(--dim);white-space:nowrap;font-size:11px;letter-spacing:.1em}
 
 /* メモの〈信じる／疑う〉札（追補 §2） */
 .tools button.on{ border-color:var(--amber); color:var(--amber); }
+
+/* 着信圧の兆候（追補 §7-5）。数値は出さず、言葉だけで伝える */
+.pc .warn1{ margin-top:6px; font-size:11px; letter-spacing:.08em; color:#9c7c3c; }
+.pc .warn2{ margin-top:6px; font-size:11px; letter-spacing:.08em; color:#c4443a; }

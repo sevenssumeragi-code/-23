@@ -558,6 +558,54 @@ test('終章の三回線同時接続は、ネオの留守電を聞いていな�
   eq(api.visibleChoices(node).some(o => o.go === 'line_all'), true, '留守電を聞いても選べない');
 });
 
+/* ------------------------------------------------------------
+   追補 §7 ストレス蓄積による着信頻度の低下
+   ------------------------------------------------------------ */
+test('着信圧 = ストレス −（信頼 − 50）÷ 2', () => {
+  const S = fresh();
+  S.chars.LEN.stress = 0;  S.chars.LEN.trust = 20; eq(api.callPressure('LEN'), 15, '開始時の基礎値が+15でない');
+  S.chars.LEN.stress = 30; S.chars.LEN.trust = 20; eq(api.callPressure('LEN'), 45, '計算式が違う');
+  S.chars.LEN.stress = 30; S.chars.LEN.trust = 60; eq(api.callPressure('LEN'), 25, '信頼が高いと粘る、が成立しない');
+  S.chars.LEN.life = '消失'; assert(api.callPressure('LEN') > 900, '生存していない相手が掛けてくる');
+});
+
+test('着信圧が閾値以上だと、その夜その人からの着信は無い', () => {
+  const S = fresh();
+  const gates = [
+    ['ch1', 'LEN', 30], ['ch2', 'JIN', 28], ['ch3', 'HYU', 32], ['ch5', 'LEN', 50]
+  ];
+  for (const [ch, who, th] of gates) {
+    const gate = SCENARIO[ch].find(n => n.if && n.if.silent && n.if.silent[0] === who && n.if.silent[1] === th);
+    assert(gate, `${ch} の ${who} 着信圧ゲート（閾値${th}）が無い`);
+    // 閾値の境界で切り替わること
+    S.chars[who].life = '生存'; S.chars[who].trust = 50;
+    S.chars[who].stress = th - 1; eq(api.cond(gate.if), false, `${ch} 閾値未満で途絶える`);
+    S.chars[who].stress = th;     eq(api.cond(gate.if), true,  `${ch} 閾値以上でも掛かってくる`);
+  }
+});
+
+test('着信が途絶えた夜には、必ず折り返しの選択肢が出る（時間が足りれば）', () => {
+  const S = fresh();
+  for (const [ch, label] of [['ch1','d2_silent'],['ch2','jin_silent'],['ch3','hyu_silent'],['ch5','len12_silent']]) {
+    const arr = SCENARIO[ch];
+    const i = arr.findIndex(n => n.n === label);
+    assert(i >= 0, `${label} が無い`);
+    const node = arr.slice(i).find(n => n.ch);
+    const dial = node.ch.find(o => o.tag === '発信');
+    assert(dial, `${label} に折り返しの選択肢が無い`);
+    assert(dial.cost >= 10 && dial.cost <= 18, `${label} の折り返しの所要時間が10〜18分でない（${dial.cost}）`);
+    assert(JSON.stringify(dial.req || {}).includes('time'), `${label} の折り返しに残り時間の条件が無い`);
+    // 残り時間が足りなければ選択肢そのものが出ない
+    S.clock = api.SHIFT_END - (dial.cost - 1);
+    eq(api.cond(dial.req), false, `${label} 時間が足りないのに折り返せてしまう`);
+    S.clock = api.SHIFT_END - dial.cost;
+    eq(api.cond(dial.req), true, `${label} 時間が足りているのに折り返せない`);
+    // 折り返すと本来のシーンへ合流する
+    assert(dial.eff && dial.eff[Object.keys(dial.eff).find(k => k.endsWith('.stress'))] <= -12,
+      `${label} の折り返しでストレスが12以上下がらない`);
+  }
+});
+
 /* ------------------------------------------------------------ */
 console.log('ミッドナイトライン ― 回帰テスト\n');
 for (const [mark, name] of results) {

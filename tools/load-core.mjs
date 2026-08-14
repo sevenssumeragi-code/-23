@@ -30,7 +30,7 @@ export function loadApi() {
     STILLS, ENDINGS, SCENARIO, CHARS, TRACKED, Hooks,
     newState, setState, setGlobal, cond, applyPar, applyData, applyTime,
     applyChoice, visibleChoices, selectableChoices, timeoutChoice, resolveJump, judge,
-    timeLeft, fatigue, realSec, checkShift, holdLine, resumeLine, expireVM, markMemo,
+    timeLeft, fatigue, realSec, checkShift, callPressure, holdLine, resumeLine, expireVM, markMemo,
     clockStr, SHIFT_END, DIALS,
     F, SET, CNT, getS: () => S, getG: () => G
   };`, ctx);

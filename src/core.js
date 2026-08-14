@@ -116,6 +116,17 @@ function expireVM(){
   return lost;
 }
 
+/* ---------- 着信圧（追補 §7） ----------
+   着信圧 = ストレス －（信頼 － 50）÷ 2
+   閾値以上になると、その夜その人からの着信は来ない。
+   信頼が高い相手はストレスが溜まっても粘ってかけてくる。
+   信頼が低い相手は、少しの負荷で離れる。 */
+function callPressure(k){
+  const c = S.chars[k]; if(!c) return 0;
+  if(c.life !== '生存') return 999;
+  return c.stress - (c.trust - 50) / 2;
+}
+
 /* ---------- 条件評価 ----------
    上から最初に一致したキーだけを見て返す（複数キー併記は先勝ち）。 */
 function cond(c){
@@ -132,6 +143,7 @@ function cond(c){
   if(c.md)   return F('MD_'+c.md);                          // メモに〈疑う〉札
   if(c.time) return timeLeft() >= c.time;                   // 残り通話時間（追補 §6-1）
   if(c.held) return !!S.held;                               // 保留中の回線がある
+  if(c.silent) return callPressure(c.silent[0]) >= c.silent[1]; // 着信圧が閾値以上＝今夜かけてこない（追補 §7）
   if(c.alive) return S.chars[c.alive].life === '生存';
   if(c.loop)  return S.loop >= c.loop;
   if(c.recs)  return (G.recs||[]).length >= c.recs;      // 裏を暴いた録音の累計（周回跨ぎ）

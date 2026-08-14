@@ -311,6 +311,8 @@ TRUE / SECRET の完全な成立条件は `docs/ENGINE.md` §9 を参照。
 | `LEDGER_01` | メモ「降っていない雨」を〈信じる〉にして設置台帳を照会した |
 | `LEN_NIGHT6` / `MUN_NIGHT8` / `JIN_D9_STAY` | 同時着信・保留の場面で、相手に時間を使うほうを選んだ |
 | `THREE_LINES` | 終章の三回線同時接続（`VM_neo_three` を聞いていないと選べない） |
+| `LEN_CALLBACK` / `JIN_CALLBACK` / `HYU_CALLBACK` / `LEN_CALLBACK12` | 着信が途絶えた夜に、こちらから折り返して合流した（追補 §7-4）|
+| `LEN_D2_LOST` / `JIN_D5_LOST` / `HYU_D7_LOST` / `LEN_D12_LOST` | 折り返さず、その章の情報を失った |
 
 ---
 

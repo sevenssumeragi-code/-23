@@ -408,9 +408,36 @@ SCENARIO.ch5 = [
  {clock:'02:40'},
  {noise:2},
  {nar:'午前二時四十分。相談室には、あなたしかいない。'},
+ /* 追補 §7-2: 着信圧が50以上だと、囚われたレニィはこちらに掛けてこない。
+    LEN_REMEMBER と STORY_TRUE_KEY を失う＝TRUE の筋が切れる。 */
+ {if:{silent:['LEN',50]}, then:'len12_silent'},
  {ring:'normal'},
  {sys:'着信 — 02:40<br>番号：080-XXXX-2213（レニィ）'},
  {ch:[{t:'受話器を取る',tag:'受電',go:'len12'}]},
+
+ {n:'len12_silent'},
+ {nar:'鳴らない。'},
+ {nar:'跡地に行くと言った学生から、何の連絡もない。'},
+ {nar:'——この二週間、彼はこちらに掛けることを、少しずつやめていた。'},
+ {nar:'掛けてこなくなった理由に、心当たりが無いわけではない。'},
+ {sec:18},
+ {ch:[
+  {t:'レニィの携帯に発信する',tag:'発信',cost:12,req:{time:12},
+   eff:{'LEN.stress':-12,'LEN.trust':6},set:{LEN_CALLBACK12:1},
+   go:'len12',line:'（080-XXXX-2213。三回、四回——繋がった）'},
+  {t:'……ジンパチたちの連絡を待つ',tag:'保留',cost:2,
+   eff:{'LEN.stress':10},set:{LEN_D12_LOST:1},go:'len12_lost'},
+  {t:'（受話器を見つめたまま、何もしなかった）',tag:'沈黙',silent:1,timeout:1,
+   eff:{'LEN.stress':10},set:{LEN_D12_LOST:1},go:'len12_lost'}
+ ]},
+
+ {n:'len12_lost'},
+ {noise:3},
+ {nar:'朝まで、レニィの番号は鳴らなかった。'},
+ {nar:'こちらから掛けることも、しなかった。'},
+ {nar:'——十年前、この部屋で、同じ選択をした人がいる。'},
+ {memo:['掛けなかった夜','レニィが跡地にいた夜、こちらからも掛けなかった。']},
+ {go:'len_after'},
 
  {n:'len12'},
  {call:{who:'レニィ',c:'LEN',num:'080-XXXX-2213'}},
